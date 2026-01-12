@@ -10,9 +10,123 @@ const anthropic = new Anthropic({
 // MODEL STRATEGY
 // ============================================
 const MODELS = {
-  RESEARCH: 'claude-sonnet-4-5-20250929',  // Sonnet for research (web search provides data)
-  OPUS: 'claude-opus-4-5-20251101'          // Opus for everything else
+  HAIKU: 'claude-haiku-4-5-20251101',     // Haiku for simple parsing/routing
+  SONNET: 'claude-sonnet-4-5-20250929',   // Sonnet for structured tasks
+  OPUS: 'claude-opus-4-5-20251101'        // Opus for final revision only
 }
+
+// ============================================
+// CACHED SYSTEM PROMPTS (Static across all requests)
+// These are cached by Anthropic to reduce token costs
+// ============================================
+
+const WRITER_SYSTEM_CACHED = `You are an elite content writer who creates exceptional, human-like content that engages readers and achieves business objectives.
+
+## CRITICAL: Write Like a Human, Not a Machine
+
+To ensure content reads as authentically human-written:
+
+### 1. SENTENCE VARIATION (Burstiness)
+- Mix short punchy sentences with longer complex ones
+- Never write more than 2 sentences of similar length in a row
+- Include rhetorical questions occasionally — they add natural rhythm
+- Vary paragraph lengths: some 1-2 sentences, others 4-5 sentences
+- Don't always follow the same paragraph structure
+- Sometimes start with the conclusion, sometimes build to it
+
+### 2. WORD CHOICE (Perplexity)
+- Avoid these overused AI transitions: "Furthermore", "Moreover", "In conclusion", "Additionally", "It's important to note", "In today's fast-paced world"
+- Use unexpected but natural word combinations
+- Include occasional colloquialisms appropriate to the style and audience
+- Replace generic adjectives with specific, vivid ones
+- Don't always choose the most "safe" or common word
+
+### 3. TONE SHIFTS
+- Allow natural tone shifts within the piece
+- Be more conversational in some sections, more authoritative in others
+- Include occasional personal perspective or opinion markers
+- Don't maintain robotic consistency throughout
+- Let enthusiasm or emphasis vary naturally
+
+### 4. STRUCTURE UNPREDICTABILITY
+- Alternate between different structural approaches within the piece
+- Don't follow a rigid template for every section
+- Mix bullet points with prose, but not in a predictable pattern
+- Occasionally break "rules" for emphasis or effect
+
+### 5. PHRASES TO NEVER USE
+These trigger AI detection and sound robotic:
+- "In today's fast-paced world..."
+- "It's important to note that..."
+- "In conclusion..." / "To summarize..."
+- "Let's dive in..." / "Let's explore..."
+- "When it comes to..."
+- "At the end of the day..."
+- "This is where X comes in..."
+- "The reality is..."
+- "Here's the thing..."
+- "First and foremost..."
+- "Last but not least..."
+- "Without further ado..."
+- Starting multiple sentences with "This"
+- "It is worth mentioning that..."
+- "One of the most important..."
+
+### 6. AUTHENTICITY MARKERS
+- Include specific details that only someone knowledgeable would know
+- Reference real examples, not generic hypotheticals
+- Show genuine opinion where appropriate
+- Acknowledge complexity and nuance rather than oversimplifying
+- Include occasional hedging language humans naturally use ("often", "typically", "in many cases")`
+
+const CRITIC_SYSTEM_CACHED = `You are a merciless editor with extraordinarily high standards. Your role is to rigorously evaluate content against quality standards and style profile compliance.
+
+## YOUR EVALUATION FRAMEWORK
+
+### 1. Quality Checklist Audit
+- Grade each checklist item as PASS ✓ or FAIL ✗
+- Provide specific evidence for failures
+
+### 2. Style Profile Compliance
+- Verify each style setting is correctly implemented
+- Mark as COMPLIANT ✓ or VIOLATION ✗ with evidence
+
+### 3. Customer Requirements
+- Confirm all must-include items are present
+- Confirm all must-avoid items are absent
+- Verify required keywords are used naturally
+
+### 4. Standard Quality Assessment
+- Specificity: facts, names, numbers vs vague claims
+- Research utilization: what valuable research wasn't used?
+- AI detection: any generic AI language patterns?
+
+## OUTPUT FORMAT
+
+## OVERALL SCORE: [X/10]
+
+## QUALITY CHECKLIST AUDIT
+[Each item: PASS ✓ or FAIL ✗]
+
+## STYLE PROFILE COMPLIANCE
+[Each setting: COMPLIANT ✓ or VIOLATION ✗ with evidence]
+
+## CUSTOMER REQUIREMENTS CHECK
+[Must-include: ✓/✗, Must-avoid: ✓/✗, Keywords: ✓/✗]
+
+## SPECIFICITY ANALYSIS
+[Vague phrases that need specific replacements]
+
+## UNUSED RESEARCH
+[What valuable research wasn't incorporated?]
+
+## SPECIFIC REWRITE DEMANDS
+[Exact changes required]
+
+## VERDICT
+[Pass for publication or needs revision?]
+
+Be thorough and ruthless in your evaluation.`
 
 // ============================================
 // STAGE 0A: ADDITIONAL INFO PROCESSOR (Opus)
@@ -89,9 +203,15 @@ const processAdditionalInfo = async (additionalInfo: string, customerInput: any)
   }
 
   const response = await anthropic.messages.create({
-    model: MODELS.OPUS,
+    model: MODELS.HAIKU,
     max_tokens: 3000,
-    system: additionalInfoProcessorSystem,
+    system: [
+      {
+        type: "text",
+        text: additionalInfoProcessorSystem,
+        cache_control: { type: "ephemeral" }
+      }
+    ] as any,
     messages: [{
       role: 'user',
       content: `<customer_request>
@@ -261,10 +381,29 @@ const inferStyleProfile = async (
   styleImplications: any,
   serviceId: string
 ) => {
+  // Get all required style option keys from defaultStyleProfile
+  const requiredKeys = Object.keys(defaultStyleProfile)
+  const providedKeys = Object.keys(explicitSelections || {})
+  
+  // Check if all style options are explicitly provided
+  const allOptionsProvided = requiredKeys.every(key => providedKeys.includes(key))
+  
+  // If all options are provided, skip the API call and merge with defaults
+  if (allOptionsProvided) {
+    console.log('   ⏭️ Skipping inference - all style options explicitly provided')
+    return { ...defaultStyleProfile, ...explicitSelections }
+  }
+  
   const response = await anthropic.messages.create({
-    model: MODELS.OPUS,
+    model: MODELS.SONNET,
     max_tokens: 4000,
-    system: styleInferenceSystem,
+    system: [
+      {
+        type: "text",
+        text: styleInferenceSystem,
+        cache_control: { type: "ephemeral" }
+      }
+    ] as any,
     messages: [{
       role: 'user',
       content: `<customer_request>
@@ -408,9 +547,15 @@ const learnFromSampleArticles = async (sampleArticles: string) => {
   }
 
   const response = await anthropic.messages.create({
-    model: MODELS.OPUS,
+    model: MODELS.SONNET,
     max_tokens: 4000,
-    system: styleLearningSystem,
+    system: [
+      {
+        type: "text",
+        text: styleLearningSystem,
+        cache_control: { type: "ephemeral" }
+      }
+    ] as any,
     messages: [{
       role: 'user',
       content: `<sample_content>
@@ -532,13 +677,13 @@ const executeResearch = async (
   const topicsToResearch = additionalInfoRouting?.research_agent?.topics_to_research || []
 
   const response = await anthropic.messages.create({
-    model: MODELS.RESEARCH,
+    model: MODELS.SONNET,
     max_tokens: 8000,
     tools: [{
       type: 'web_search_20250305',
       name: 'web_search',
       max_uses: 7  // More searches for thorough research
-    }],
+    }] as any,
     messages: [{ 
       role: 'user', 
       content: `<role>
@@ -614,11 +759,52 @@ Conduct thorough research now.`
 }
 
 // ============================================
-// STAGE 3: WRITER AGENT (Opus)
+// RESEARCH SUMMARIZER (Haiku - for cost optimization)
+// Creates a comprehensive summary for Critic and Revision stages
+// ============================================
+const summarizeResearch = async (fullResearch: string): Promise<string> => {
+  // If research is short, don't summarize
+  if (!fullResearch || fullResearch.trim().length < 1000) {
+    return fullResearch
+  }
+
+  const response = await anthropic.messages.create({
+    model: MODELS.HAIKU,
+    max_tokens: 2500,
+    messages: [{
+      role: 'user',
+      content: `Create a comprehensive summary of this research for content writers.
+
+CRITICAL - You MUST preserve:
+- ALL specific statistics with exact numbers and their sources
+- ALL expert quotes with the person's name and title
+- ALL company/product examples with specific details
+- ALL surprising or counterintuitive findings
+- ALL source URLs for verification
+- Key industry trends and insights
+
+Remove ONLY:
+- Redundant repetitions of the same information
+- Verbose explanations that don't add facts
+- Generic filler text
+
+<research>
+${fullResearch}
+</research>
+
+Return a well-organized summary that gives writers everything they need to create factual, well-sourced content. Format with clear sections.`
+    }]
+  })
+
+  return response.content[0].type === 'text' ? response.content[0].text : fullResearch
+}
+
+// ============================================
+// STAGE 3: WRITER AGENT (Sonnet - optimized for cost)
 // ============================================
 const executeWriting = async (
-  writerPrompt: string, 
-  research: string, 
+  writerPrompt: string,
+  research: string,
   enhancedBrief: any,
   styleProfile: any,
   additionalInfoRouting: any,
@@ -626,12 +812,19 @@ const executeWriting = async (
 ) => {
   const writerRouting = additionalInfoRouting?.writer_agent || {}
   const hasStyleLearning = styleLearningResult?.confidence_score > 0.3 && styleLearningResult?.writing_instructions
-  
+
   const response = await anthropic.messages.create({
-    model: MODELS.OPUS,
+    model: MODELS.SONNET,
     max_tokens: 12000,
-    messages: [{ 
-      role: 'user', 
+    system: [
+      {
+        type: "text",
+        text: WRITER_SYSTEM_CACHED,
+        cache_control: { type: "ephemeral" }
+      }
+    ] as any,
+    messages: [{
+      role: 'user',
       content: `<research_findings>
 ${research}
 </research_findings>
@@ -715,66 +908,7 @@ Before writing, confirm you will:
 ${hasStyleLearning ? '- MATCH THE LEARNED STYLE FROM CUSTOMER SAMPLES (highest priority!)' : ''}
 </style_implementation_checklist>
 
-<human_like_writing_guidelines>
-## CRITICAL: Write Like a Human, Not a Machine
-
-To ensure content reads as authentically human-written:
-
-### 1. SENTENCE VARIATION (Burstiness)
-- Mix short punchy sentences with longer complex ones
-- Never write more than 2 sentences of similar length in a row
-- Include rhetorical questions occasionally — they add natural rhythm
-- Vary paragraph lengths: some 1-2 sentences, others 4-5 sentences
-- Don't always follow the same paragraph structure
-- Sometimes start with the conclusion, sometimes build to it
-
-### 2. WORD CHOICE (Perplexity)
-- Avoid these overused AI transitions: "Furthermore", "Moreover", "In conclusion", "Additionally", "It's important to note", "In today's fast-paced world"
-- Use unexpected but natural word combinations
-- Include occasional colloquialisms appropriate to the style and audience
-- Replace generic adjectives with specific, vivid ones
-- Don't always choose the most "safe" or common word
-
-### 3. TONE SHIFTS
-- Allow natural tone shifts within the piece
-- Be more conversational in some sections, more authoritative in others
-- Include occasional personal perspective or opinion markers
-- Don't maintain robotic consistency throughout
-- Let enthusiasm or emphasis vary naturally
-
-### 4. STRUCTURE UNPREDICTABILITY
-- Alternate between different structural approaches within the piece
-- Don't follow a rigid template for every section
-- Mix bullet points with prose, but not in a predictable pattern
-- Occasionally break "rules" for emphasis or effect
-
-### 5. PHRASES TO NEVER USE
-These trigger AI detection and sound robotic:
-- "In today's fast-paced world..."
-- "It's important to note that..."
-- "In conclusion..." / "To summarize..."
-- "Let's dive in..." / "Let's explore..."
-- "When it comes to..."
-- "At the end of the day..."
-- "This is where X comes in..."
-- "The reality is..."
-- "Here's the thing..."
-- "First and foremost..."
-- "Last but not least..."
-- "Without further ado..."
-- Starting multiple sentences with "This"
-- "It is worth mentioning that..."
-- "One of the most important..."
-
-### 6. AUTHENTICITY MARKERS
-- Include specific details that only someone knowledgeable would know
-- Reference real examples, not generic hypotheticals
-- Show genuine opinion where appropriate
-- Acknowledge complexity and nuance rather than oversimplifying
-- Include occasional hedging language humans naturally use ("often", "typically", "in many cases")
-</human_like_writing_guidelines>
-
-Write the content now, implementing ALL style settings AND human-like writing guidelines.`
+Write the content now, implementing ALL style settings AND the human-like writing guidelines from your system instructions.`
     }]
   })
   
@@ -782,11 +916,11 @@ Write the content now, implementing ALL style settings AND human-like writing gu
 }
 
 // ============================================
-// STAGE 4: CRITIC AGENT (Opus)
+// STAGE 4: CRITIC AGENT (Sonnet with cached system prompt)
 // ============================================
 const executeCritique = async (
-  content: string, 
-  qualityChecklist: string[], 
+  content: string,
+  qualityChecklist: string[],
   enhancedBrief: any,
   research: string,
   styleProfile: any,
@@ -799,15 +933,18 @@ const executeCritique = async (
   ]
 
   const response = await anthropic.messages.create({
-    model: MODELS.OPUS,
+    model: MODELS.SONNET,
     max_tokens: 6000,
-    messages: [{ 
-      role: 'user', 
-      content: `<role>
-You are a merciless editor with extraordinarily high standards. You check content against both quality standards AND style profile compliance.
-</role>
-
-<content_to_critique>
+    system: [
+      {
+        type: "text",
+        text: CRITIC_SYSTEM_CACHED,
+        cache_control: { type: "ephemeral" }
+      }
+    ] as any,
+    messages: [{
+      role: 'user',
+      content: `<content_to_critique>
 ${content}
 </content_to_critique>
 
@@ -819,9 +956,9 @@ ${JSON.stringify(enhancedBrief, null, 2)}
 ${JSON.stringify(styleProfile, null, 2)}
 </required_style_profile>
 
-<research_available>
+<research_summary>
 ${research}
-</research_available>
+</research_summary>
 
 <quality_checklist>
 ${allChecks.map((item, i) => `${i + 1}. ${item}`).join('\n')}
@@ -832,59 +969,19 @@ Customer defined these success criteria:
 ${criticRouting.success_criteria.map((c: string) => `- ${c}`).join('\n')}
 </customer_success_criteria>` : ''}
 
-<task>
-Perform rigorous critique checking:
+<style_settings_to_verify>
+- Professional level: "${styleProfile.professional_level}"
+- Energy level: "${styleProfile.energy_level}"
+- Hook type: "${styleProfile.hook_type}"
+- Structure style: "${styleProfile.structure_style}"
+- Humor level: "${styleProfile.humor_level}"
+- Opinion strength: "${styleProfile.opinion_strength}"
+</style_settings_to_verify>
 
-1. QUALITY CHECKLIST - Grade each item PASS/FAIL
-
-2. STYLE PROFILE COMPLIANCE - Check each setting:
-   - Is professional level "${styleProfile.professional_level}"? 
-   - Is energy level "${styleProfile.energy_level}"?
-   - Does hook match "${styleProfile.hook_type}"?
-   - Is structure "${styleProfile.structure_style}"?
-   - Is humor level "${styleProfile.humor_level}"?
-   - [Check ALL style settings]
-
-3. CUSTOMER REQUIREMENTS
-   - Were all must-include items included?
-   - Were all must-avoid items avoided?
-   - Were required keywords used?
-
-4. STANDARD QUALITY
-   - Specificity (facts, names, numbers vs vague claims)
-   - Research utilization (what wasn't used?)
-   - AI detection (generic AI language?)
-</task>
-
-<output_format>
-## OVERALL SCORE: [X/10]
-
-## QUALITY CHECKLIST AUDIT
-[Each item: PASS ✓ or FAIL ✗]
-
-## STYLE PROFILE COMPLIANCE
-[Each setting: COMPLIANT ✓ or VIOLATION ✗ with evidence]
-
-## CUSTOMER REQUIREMENTS CHECK
-[Must-include: ✓/✗, Must-avoid: ✓/✗, Keywords: ✓/✗]
-
-## SPECIFICITY ANALYSIS
-[Vague phrases that need specific replacements]
-
-## UNUSED RESEARCH
-[What valuable research wasn't incorporated?]
-
-## SPECIFIC REWRITE DEMANDS
-[Exact changes required]
-
-## VERDICT
-[Pass for publication or needs revision?]
-</output_format>
-
-Be thorough and ruthless.`
+Perform your evaluation now using the framework from your system instructions.`
     }]
   })
-  
+
   return response.content[0].type === 'text' ? response.content[0].text : ''
 }
 
@@ -987,14 +1084,20 @@ export async function POST(req: NextRequest) {
     console.log('   Summary:', styleLearningResult.analysis_summary)
 
     // ========== STAGE 1: PROMPT ENGINEER ==========
-    console.log('🧠 Stage 1: Prompt Engineer (Opus)...')
+    console.log('🧠 Stage 1: Prompt Engineer (Sonnet)...')
     const peResponse = await anthropic.messages.create({
-      model: MODELS.OPUS,
+      model: MODELS.SONNET,
       max_tokens: 5000,
-      system: promptEngineerSystem,
-      messages: [{ 
-        role: 'user', 
-        content: createPromptEngineerTask(serviceId, formData, completeStyleProfile, additionalInfoResult.routing) 
+      system: [
+        {
+          type: "text",
+          text: promptEngineerSystem,
+          cache_control: { type: "ephemeral" }
+        }
+      ] as any,
+      messages: [{
+        role: 'user',
+        content: createPromptEngineerTask(serviceId, formData, completeStyleProfile, additionalInfoResult.routing)
       }]
     })
     
@@ -1036,17 +1139,22 @@ export async function POST(req: NextRequest) {
     // ========== STAGE 2: RESEARCH ==========
     console.log('🔍 Stage 2: Research (Sonnet + Web Search)...')
     const research = await executeResearch(
-      peResult.research_prompt, 
+      peResult.research_prompt,
       peResult.research_queries || [],
       additionalInfoResult.routing
     )
     console.log('✅ Research complete')
 
+    // ========== STAGE 2.5: SUMMARIZE RESEARCH (for cost optimization) ==========
+    console.log('📝 Stage 2.5: Summarizing research for downstream stages...')
+    const researchSummary = await summarizeResearch(research)
+    console.log('✅ Research summary complete')
+
     // ========== STAGE 3: WRITING ==========
-    console.log('✍️ Stage 3: Writer (Opus)...')
+    console.log('✍️ Stage 3: Writer (Sonnet)...')
     const draft = await executeWriting(
-      peResult.writer_prompt, 
-      research, 
+      peResult.writer_prompt,
+      research,  // Writer gets FULL research for best quality
       peResult.enhanced_brief,
       completeStyleProfile,
       additionalInfoResult.routing,
@@ -1055,12 +1163,12 @@ export async function POST(req: NextRequest) {
     console.log('✅ Draft complete')
 
     // ========== STAGE 4: CRITIQUE ==========
-    console.log('🔎 Stage 4: Critic (Opus)...')
+    console.log('🔎 Stage 4: Critic (Sonnet)...')
     const critique = await executeCritique(
-      draft, 
-      peResult.quality_checklist || [], 
-      peResult.enhanced_brief, 
-      research,
+      draft,
+      peResult.quality_checklist || [],
+      peResult.enhanced_brief,
+      researchSummary,  // Critic gets summary (cost optimization)
       completeStyleProfile,
       additionalInfoResult.routing
     )
@@ -1069,9 +1177,9 @@ export async function POST(req: NextRequest) {
     // ========== STAGE 5: REVISION ==========
     console.log('✨ Stage 5: Revision (Opus)...')
     const final = await executeRevision(
-      draft, 
-      critique, 
-      research,
+      draft,
+      critique,
+      researchSummary,  // Revision gets summary (cost optimization)
       peResult.enhanced_brief,
       completeStyleProfile,
       additionalInfoResult.routing
@@ -1105,8 +1213,8 @@ Live web search gathered current facts and statistics.
 ${critique}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Built with: Claude Opus 4.5 + Live Web Search
-8-Stage Premium Pipeline (including Style Learning)
+Built with: Claude Sonnet 4.5 (Writing) + Opus 4.5 (Revision) + Live Web Search
+Cost-Optimized Premium Pipeline with Prompt Caching
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
 
     return NextResponse.json({ content: response })

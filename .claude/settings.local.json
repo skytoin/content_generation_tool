@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__serena__find_symbol",
+      "mcp__serena__search_for_pattern",
+      "mcp__serena__replace_symbol_body",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)",
+      "mcp__serena__think_about_whether_you_are_done",
+      "Bash(tasklist:*)",
+      "Bash(curl:*)",
+      "mcp__serena__list_dir",
+      "Bash(findstr:*)",
+      "Bash(powershell -Command \"Get-Process | Where-Object {$_ProcessName -like ''*node*''} | Select-Object Id, ProcessName\")",
+      "Bash(npx next lint:*)",
+      "Bash(npx next build)"
+    ]
+  },
+  "allowedTools": [
+    "Edit",
+    "Read",
+    "Write",
+    "Bash(git add:*)",
+    "Bash(git commit:*)",
+    "Bash(npm:*)",
+    "Bash(python:*)",
+    "Bash(pytest:*)"
+  ]
+}
