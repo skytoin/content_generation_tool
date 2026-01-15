@@ -1,0 +1,150 @@
+// ContentForge AI - Database Schema
+// Using Prisma with PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// NEXTAUTH REQUIRED TABLES
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+
+  // Stripe integration
+  stripeCustomerId     String?   @unique
+  subscriptionTier     String    @default("free") // free, pro, enterprise
+  subscriptionStatus   String?   // active, canceled, past_due, etc.
+  subscriptionId       String?   // Stripe subscription ID
+  currentPeriodEnd     DateTime?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  accounts Account[]
+  sessions Session[]
+  projects Project[]
+  payments Payment[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================
+// APPLICATION TABLES
+// ============================================
+
+model Project {
+  id        String   @id @default(cuid())
+  userId    String
+
+  // Project info
+  name      String
+  status    String   @default("draft") // draft, generating, completed, failed
+  serviceType String // blog-basic, blog-premium, social-pack, email-sequence, etc.
+
+  // Form data (stored as JSON)
+  formData        Json?   // topic, company, audience, goals, sampleArticles
+  styleSelections Json?   // all the style options selected
+  additionalInfo  String? @db.Text
+
+  // Generated content
+  result        String? @db.Text // The actual generated content
+  qualityReport String? @db.Text // The quality assurance report
+
+  // Metadata
+  wordCount   Int?
+  costCents   Int?      // Cost in cents (e.g., 9900 = $99.00)
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("projects")
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  userId    String
+
+  // Stripe info
+  stripePaymentId   String?  @unique
+  stripeInvoiceId   String?
+
+  // Payment details
+  amountCents       Int      // Amount in cents
+  currency          String   @default("usd")
+  status            String   // succeeded, pending, failed
+  description       String?
+
+  // What was purchased
+  projectId         String?  // If payment was for a specific project
+  subscriptionTier  String?  // If payment was for a subscription
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("payments")
+}

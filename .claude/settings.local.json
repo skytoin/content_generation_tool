@@ -13,7 +13,22 @@
       "Bash(findstr:*)",
       "Bash(powershell -Command \"Get-Process | Where-Object {$_ProcessName -like ''*node*''} | Select-Object Id, ProcessName\")",
       "Bash(npx next lint:*)",
-      "Bash(npx next build)"
+      "Bash(npx next build)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma init)",
+      "Bash(npx prisma generate:*)",
+      "Bash(where:*)",
+      "Bash(docker ps:*)",
+      "Bash(powershell:*)",
+      "Bash(docker info:*)",
+      "Bash(docker run:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(docker exec:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres123@localhost:5432/contentforge\" npx prisma db push:*)",
+      "Bash(docker logs:*)",
+      "Bash(node -e:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker rm:*)"
     ]
   },
   "allowedTools": [
