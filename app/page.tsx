@@ -4,13 +4,22 @@ import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
+// Pricing tiers for each service type
+const tierPricing: Record<string, { budget: number; standard: number; premium: number }> = {
+  'blog-basic': { budget: 5, standard: 10, premium: 20 },
+  'blog-premium': { budget: 8, standard: 15, premium: 35 },
+  'social-pack': { budget: 12, standard: 22, premium: 45 },
+  'email-sequence': { budget: 15, standard: 28, premium: 55 },
+  'seo-report': { budget: 20, standard: 35, premium: 65 },
+  'content-bundle': { budget: 40, standard: 80, premium: 150 },
+}
+
 const services = [
   {
     id: 'blog-basic',
     name: 'Blog Post - Basic',
     description: '1600-2000 word SEO-optimized article on any topic',
-    price: 49,
-    deliverables: ['1 SEO-optimized article (1600-2000 words)', 'Meta description', 'H1/H2 structure', '2-3 business day delivery'],
+    deliverables: ['1 SEO-optimized article (1600-2000 words)', 'Meta description', 'H1/H2 structure', 'Same day delivery'],
     icon: '📝',
     popular: false,
   },
@@ -18,8 +27,7 @@ const services = [
     id: 'blog-premium',
     name: 'Blog Post - Premium',
     description: '3000-4000 word in-depth article with research',
-    price: 99,
-    deliverables: ['1 comprehensive article (3000-4000 words)', 'Meta description', 'Internal linking suggestions', 'Featured image prompts', '2-3 business day delivery'],
+    deliverables: ['1 comprehensive article (3000-4000 words)', 'Meta description', 'Internal linking suggestions', 'Featured image prompts', 'Same day delivery'],
     icon: '📚',
     popular: true,
   },
@@ -27,8 +35,7 @@ const services = [
     id: 'social-pack',
     name: 'Social Media Pack',
     description: '30 posts across platforms for one month',
-    price: 79,
-    deliverables: ['10 LinkedIn posts', '10 Twitter/X posts', '10 Instagram captions', 'Hashtag research', '24 hour delivery'],
+    deliverables: ['10 LinkedIn posts', '10 Twitter/X posts', '10 Instagram captions', 'Hashtag research', 'Same day delivery'],
     icon: '📱',
     popular: false,
   },
@@ -36,8 +43,7 @@ const services = [
     id: 'email-sequence',
     name: 'Email Sequence',
     description: '5-email nurture sequence for any goal',
-    price: 149,
-    deliverables: ['5 strategic emails', 'Subject line options', 'Call-to-action optimization', 'A/B testing suggestions', '3-5 business day delivery'],
+    deliverables: ['5 strategic emails', 'Subject line options', 'Call-to-action optimization', 'A/B testing suggestions', 'Same day delivery'],
     icon: '✉️',
     popular: false,
   },
@@ -45,8 +51,7 @@ const services = [
     id: 'seo-report',
     name: 'SEO Content Audit',
     description: 'Comprehensive content strategy report',
-    price: 199,
-    deliverables: ['Full site content audit', 'Keyword opportunity analysis', '10 article topic suggestions', 'Competitor content gaps', '5-7 business day delivery'],
+    deliverables: ['Full site content audit', 'Keyword opportunity analysis', '10 article topic suggestions', 'Competitor content gaps', 'Same day delivery'],
     icon: '📊',
     popular: false,
   },
@@ -54,10 +59,37 @@ const services = [
     id: 'content-bundle',
     name: 'Monthly Content Bundle',
     description: 'Everything you need for content marketing',
-    price: 399,
     deliverables: ['4 premium blog posts', '30 social media posts', '1 email sequence', 'Content calendar', 'Priority support'],
     icon: '🚀',
     popular: true,
+  },
+]
+
+const tiers = [
+  {
+    id: 'budget',
+    name: 'Budget',
+    description: 'Great quality at the lowest price',
+    badge: '💰 Best Value',
+    color: 'from-green-500 to-emerald-500',
+    features: ['GPT-4o powered', '4 research queries', 'Standard quality checks', 'Fast delivery'],
+  },
+  {
+    id: 'standard',
+    name: 'Standard',
+    description: 'Enhanced quality with premium finishing',
+    badge: '⭐ Recommended',
+    color: 'from-blue-500 to-indigo-500',
+    features: ['GPT-4o + Claude Sonnet', '7 research queries', 'Advanced quality checks', 'Professional polish'],
+    popular: true,
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    description: 'Best-in-class AI content generation',
+    badge: '👑 Top Quality',
+    color: 'from-purple-500 to-pink-500',
+    features: ['Claude Opus 4.5 final edit', 'Live web search', 'Comprehensive research', 'Expert-level quality'],
   },
 ]
 
@@ -202,6 +234,51 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Pricing Tiers Section */}
+      <section id="pricing" className="py-20 bg-slate-50 scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
+              Choose Your Quality Tier
+            </h2>
+            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+              Three quality levels to match your budget and needs. Same great content, different AI models.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            {tiers.map((tier) => (
+              <div
+                key={tier.id}
+                className={`relative glass rounded-2xl p-8 card-hover ${tier.popular ? 'ring-2 ring-primary-500 scale-105' : ''}`}
+              >
+                {tier.popular && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                    <span className="bg-gradient-to-r from-primary-500 to-accent-500 text-white text-sm font-medium px-4 py-1 rounded-full">
+                      Most Popular
+                    </span>
+                  </div>
+                )}
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r ${tier.color} text-white mb-4`}>
+                  {tier.badge}
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">{tier.name}</h3>
+                <p className="text-slate-600 text-sm mb-6">{tier.description}</p>
+                <ul className="space-y-3 mb-6">
+                  {tier.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Services Section */}
       <section id="services" className="py-20 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -210,12 +287,12 @@ export default function Home() {
               Choose Your Content Package
             </h2>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Professional content for every need. No subscription, no commitment—just results.
+              Professional content for every need. Select a service, then choose your quality tier.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8" id="pricing">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {services.map((service) => (
-              <div 
+              <div
                 key={service.id}
                 className={`relative glass rounded-2xl p-8 card-hover ${service.popular ? 'pricing-popular ring-2 ring-primary-500' : ''}`}
               >
@@ -229,10 +306,23 @@ export default function Home() {
                 <div className="text-4xl mb-4">{service.icon}</div>
                 <h3 className="text-xl font-bold text-slate-900 mb-2">{service.name}</h3>
                 <p className="text-slate-600 text-sm mb-4">{service.description}</p>
-                <div className="mb-6">
-                  <span className="text-4xl font-bold text-slate-900">${service.price}</span>
-                  <span className="text-slate-500">/order</span>
+
+                {/* Tiered Pricing Display */}
+                <div className="mb-6 space-y-2">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-green-50">
+                    <span className="text-sm font-medium text-green-700">💰 Budget</span>
+                    <span className="text-lg font-bold text-green-700">${tierPricing[service.id]?.budget}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50 ring-1 ring-blue-200">
+                    <span className="text-sm font-medium text-blue-700">⭐ Standard</span>
+                    <span className="text-lg font-bold text-blue-700">${tierPricing[service.id]?.standard}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50">
+                    <span className="text-sm font-medium text-purple-700">👑 Premium</span>
+                    <span className="text-lg font-bold text-purple-700">${tierPricing[service.id]?.premium}</span>
+                  </div>
                 </div>
+
                 <ul className="space-y-3 mb-8">
                   {service.deliverables.map((item, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-slate-600">

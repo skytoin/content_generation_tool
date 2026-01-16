@@ -95,6 +95,7 @@ model Project {
   name      String
   status    String   @default("draft") // draft, generating, completed, failed
   serviceType String // blog-basic, blog-premium, social-pack, email-sequence, etc.
+  tier      String   @default("premium") // budget, standard, premium
 
   // Form data (stored as JSON)
   formData        Json?   // topic, company, audience, goals, sampleArticles

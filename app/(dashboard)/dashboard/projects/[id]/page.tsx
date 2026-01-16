@@ -43,6 +43,17 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     }
   }
 
+  const getTierBadge = (tier: string) => {
+    switch (tier) {
+      case 'budget': return { label: '💰 Budget', color: 'bg-green-100 text-green-800' }
+      case 'standard': return { label: '⭐ Standard', color: 'bg-blue-100 text-blue-800' }
+      case 'premium': return { label: '👑 Premium', color: 'bg-purple-100 text-purple-800' }
+      default: return { label: '👑 Premium', color: 'bg-purple-100 text-purple-800' }
+    }
+  }
+
+  const tierInfo = getTierBadge((project as any).tier || 'premium')
+
   return (
     <>
       <DashboardHeader
@@ -136,6 +147,14 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 <div>
                   <dt className="text-xs text-slate-500 uppercase">Type</dt>
                   <dd className="mt-1 text-sm text-slate-900 capitalize">{project.serviceType.replace('-', ' ')}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-slate-500 uppercase">Quality Tier</dt>
+                  <dd className="mt-1">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${tierInfo.color}`}>
+                      {tierInfo.label}
+                    </span>
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-xs text-slate-500 uppercase">Status</dt>

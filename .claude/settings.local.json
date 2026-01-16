@@ -29,7 +29,8 @@
       "Bash(node -e:*)",
       "Bash(docker stop:*)",
       "Bash(docker rm:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npx prisma migrate dev:*)"
     ]
   },
   "allowedTools": [

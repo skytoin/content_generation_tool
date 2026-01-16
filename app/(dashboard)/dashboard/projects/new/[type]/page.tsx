@@ -58,6 +58,49 @@ const serviceConfigs: Record<string, { name: string; icon: string; description: 
   },
 }
 
+// Tier pricing configuration
+const tierPricing: Record<string, { budget: number; standard: number; premium: number }> = {
+  'blog-basic': { budget: 5, standard: 10, premium: 20 },
+  'blog-premium': { budget: 8, standard: 15, premium: 35 },
+  'blog-post': { budget: 8, standard: 15, premium: 35 },
+  'social-pack': { budget: 12, standard: 22, premium: 45 },
+  'social-media': { budget: 12, standard: 22, premium: 45 },
+  'email-sequence': { budget: 15, standard: 28, premium: 55 },
+  'seo-report': { budget: 20, standard: 35, premium: 65 },
+  'content-bundle': { budget: 40, standard: 80, premium: 150 },
+}
+
+const tierConfigs = [
+  {
+    id: 'budget',
+    name: 'Budget',
+    badge: '💰 Best Value',
+    description: 'GPT-4o powered, 4 research queries',
+    color: 'border-green-500 bg-green-50',
+    textColor: 'text-green-700',
+    selectedColor: 'ring-2 ring-green-500 bg-green-100',
+  },
+  {
+    id: 'standard',
+    name: 'Standard',
+    badge: '⭐ Recommended',
+    description: 'GPT-4o + Claude Sonnet, 7 research queries',
+    color: 'border-blue-500 bg-blue-50',
+    textColor: 'text-blue-700',
+    selectedColor: 'ring-2 ring-blue-500 bg-blue-100',
+    popular: true,
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    badge: '👑 Top Quality',
+    description: 'Claude Opus 4.5, live web search, expert quality',
+    color: 'border-purple-500 bg-purple-50',
+    textColor: 'text-purple-700',
+    selectedColor: 'ring-2 ring-purple-500 bg-purple-100',
+  },
+]
+
 function ProjectForm() {
   const router = useRouter()
   const params = useParams()
@@ -78,8 +121,12 @@ function ProjectForm() {
   })
   const [additionalInfo, setAdditionalInfo] = useState('')
   const [styleSelections, setStyleSelections] = useState<Record<string, string>>({})
+  const [selectedTier, setSelectedTier] = useState('standard')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Get pricing for current service type
+  const currentPricing = tierPricing[type] || tierPricing['blog-premium']
 
   // Load existing project data if editing
   useEffect(() => {
@@ -116,6 +163,7 @@ function ProjectForm() {
           body: JSON.stringify({
             name: projectName,
             serviceType: type,
+            tier: selectedTier,
             formData,
             styleSelections,
             additionalInfo,
@@ -157,6 +205,7 @@ function ProjectForm() {
           formData,
           styleSelections,
           additionalInfo,
+          tier: selectedTier,
         }),
       })
 
@@ -316,6 +365,46 @@ function ProjectForm() {
             selections={styleSelections}
             onChange={setStyleSelections}
           />
+        </div>
+
+        {/* Tier Selection */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
+            <span className="text-xl">⚡</span> Choose Quality Tier
+          </h2>
+          <p className="text-slate-500 text-sm mb-4">
+            Select your preferred quality level and pricing
+          </p>
+          <div className="grid md:grid-cols-3 gap-4">
+            {tierConfigs.map((tier) => (
+              <button
+                key={tier.id}
+                type="button"
+                onClick={() => setSelectedTier(tier.id)}
+                className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                  selectedTier === tier.id
+                    ? tier.selectedColor
+                    : `${tier.color} border-transparent hover:border-slate-300`
+                }`}
+              >
+                {tier.popular && (
+                  <div className="absolute -top-2 -right-2">
+                    <span className="bg-blue-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                      Popular
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-sm font-medium ${tier.textColor}`}>{tier.badge}</span>
+                  <span className={`text-xl font-bold ${tier.textColor}`}>
+                    ${currentPricing[tier.id as keyof typeof currentPricing]}
+                  </span>
+                </div>
+                <h3 className="font-semibold text-slate-900 mb-1">{tier.name}</h3>
+                <p className="text-xs text-slate-600">{tier.description}</p>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Generate Button */}

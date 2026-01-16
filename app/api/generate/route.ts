@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { defaultStyleProfile } from './options'
 import { getCurrentUser } from '@/lib/auth-utils'
+import { runBudgetPipeline, runStandardPipeline } from './tiered-pipelines'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -1054,7 +1055,7 @@ No preamble. No explanations. Just the finished piece.
 // ============================================
 export async function POST(req: NextRequest) {
   try {
-    const { serviceId, formData, styleSelections, additionalInfo } = await req.json()
+    const { serviceId, formData, styleSelections, additionalInfo, tier = 'premium' } = await req.json()
 
     // Check if user is authenticated and is admin for free usage
     const user = await getCurrentUser()
@@ -1066,12 +1067,45 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
+    console.log(`🚀 Starting content generation for ${isAdmin ? 'ADMIN' : 'user'}: ${user.email}`)
+    console.log(`📦 Tier selected: ${tier.toUpperCase()}`)
+
+    // ============================================
+    // TIER ROUTING - Route to appropriate pipeline
+    // ============================================
+    if (tier === 'budget') {
+      // Budget tier uses OpenAI models only
+      const openaiKey = process.env.OPENAI_API_KEY
+      if (!openaiKey) {
+        return NextResponse.json({ error: 'OPENAI_API_KEY not configured for Budget tier' }, { status: 400 })
+      }
+      const result = await runBudgetPipeline(serviceId, formData, styleSelections, additionalInfo)
+      return NextResponse.json(result)
+    }
+
+    if (tier === 'standard') {
+      // Standard tier uses mix of OpenAI and Claude Sonnet
+      const openaiKey = process.env.OPENAI_API_KEY
+      const anthropicKey = process.env.ANTHROPIC_API_KEY
+      if (!openaiKey) {
+        return NextResponse.json({ error: 'OPENAI_API_KEY not configured for Standard tier' }, { status: 400 })
+      }
+      if (!anthropicKey || anthropicKey === 'sk-ant-dummy') {
+        return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured for Standard tier' }, { status: 400 })
+      }
+      const result = await runStandardPipeline(serviceId, formData, styleSelections, additionalInfo)
+      return NextResponse.json(result)
+    }
+
+    // ============================================
+    // PREMIUM TIER - Original pipeline (unchanged)
+    // ============================================
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey || apiKey === 'sk-ant-dummy') {
       return NextResponse.json({ error: 'Add real ANTHROPIC_API_KEY to .env.local' }, { status: 400 })
     }
 
-    console.log(`🚀 Starting content generation for ${isAdmin ? 'ADMIN' : 'user'}: ${user.email}`)
+    console.log('👑 PREMIUM TIER: Starting premium pipeline...')
 
     // ========== STAGE 0A: PROCESS ADDITIONAL INFO ==========
     console.log('📋 Stage 0A: Processing additional information...')
