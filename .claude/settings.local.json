@@ -28,7 +28,8 @@
       "Bash(docker logs:*)",
       "Bash(node -e:*)",
       "Bash(docker stop:*)",
-      "Bash(docker rm:*)"
+      "Bash(docker rm:*)",
+      "WebSearch"
     ]
   },
   "allowedTools": [

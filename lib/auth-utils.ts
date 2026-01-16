@@ -52,3 +52,18 @@ export async function requireUserId(): Promise<string> {
 
   return session.user.id
 }
+
+// Check if current user is an admin
+export async function isCurrentUserAdmin(): Promise<boolean> {
+  const user = await getCurrentUser()
+  return user?.isAdmin ?? false
+}
+
+// Require admin access - throws error if not admin
+export async function requireAdmin() {
+  const user = await getCurrentUser()
+  if (!user?.isAdmin) {
+    throw new Error('Admin access required')
+  }
+  return user
+}

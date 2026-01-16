@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Providers } from '@/components/Providers'
+import { NavBar } from '@/components/NavBar'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -22,27 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="font-sans">
         <Providers>
-        <nav className="fixed top-0 w-full z-50 glass">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <a href="/" className="flex items-center space-x-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <span className="text-xl font-bold text-slate-800">ContentForge<span className="text-primary-500">AI</span></span>
-              </a>
-              <div className="hidden md:flex items-center space-x-8">
-                <a href="/#services" className="text-slate-600 hover:text-primary-600 transition-colors">Services</a>
-                <a href="/#pricing" className="text-slate-600 hover:text-primary-600 transition-colors">Pricing</a>
-                <a href="/#how-it-works" className="text-slate-600 hover:text-primary-600 transition-colors">How It Works</a>
-                <a href="/#faq" className="text-slate-600 hover:text-primary-600 transition-colors">FAQ</a>
-                <a href="/#services" className="btn-primary text-sm py-2 px-5">Get Started</a>
-              </div>
-            </div>
-          </div>
-        </nav>
+        <NavBar />
         <main className="pt-16">
           {children}
         </main>

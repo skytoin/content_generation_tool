@@ -20,6 +20,9 @@ model User {
   emailVerified DateTime?
   image         String?
 
+  // Admin flag - allows free usage of all services
+  isAdmin       Boolean   @default(false)
+
   // Stripe integration
   stripeCustomerId     String?   @unique
   subscriptionTier     String    @default("free") // free, pro, enterprise

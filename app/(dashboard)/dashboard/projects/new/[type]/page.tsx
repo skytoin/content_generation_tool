@@ -5,26 +5,56 @@ import { StyleSelector } from '@/components/dashboard/StyleSelector'
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams, useParams } from 'next/navigation'
 
-const serviceConfigs: Record<string, { name: string; icon: string; description: string }> = {
+const serviceConfigs: Record<string, { name: string; icon: string; description: string; apiServiceId?: string }> = {
+  // Standard dashboard types
   'blog-post': {
     name: 'Blog Post',
     icon: '📝',
     description: 'SEO-optimized articles for your website',
+    apiServiceId: 'blog-premium',
   },
   'social-media': {
     name: 'Social Media Package',
     icon: '📱',
     description: 'Engaging posts for multiple platforms',
+    apiServiceId: 'social-pack',
   },
   'email-sequence': {
     name: 'Email Sequence',
     icon: '📧',
     description: 'Converting email campaigns',
+    apiServiceId: 'email-sequence',
   },
   'seo-report': {
-    name: 'SEO Report',
+    name: 'SEO Content Audit',
     icon: '📊',
-    description: 'Comprehensive SEO analysis',
+    description: 'Comprehensive content strategy report',
+    apiServiceId: 'seo-report',
+  },
+  // Homepage service types
+  'blog-basic': {
+    name: 'Blog Post - Basic',
+    icon: '📝',
+    description: '1600-2000 word SEO-optimized article',
+    apiServiceId: 'blog-basic',
+  },
+  'blog-premium': {
+    name: 'Blog Post - Premium',
+    icon: '📚',
+    description: '3000-4000 word in-depth article with research',
+    apiServiceId: 'blog-premium',
+  },
+  'social-pack': {
+    name: 'Social Media Pack',
+    icon: '📱',
+    description: '30 posts for LinkedIn, Twitter/X, and Instagram',
+    apiServiceId: 'social-pack',
+  },
+  'content-bundle': {
+    name: 'Monthly Content Bundle',
+    icon: '🚀',
+    description: '4 blog posts, 30 social posts, 1 email sequence',
+    apiServiceId: 'content-bundle',
   },
 }
 
@@ -123,7 +153,7 @@ function ProjectForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          serviceId: type === 'blog-post' ? 'blog-premium' : type,
+          serviceId: config.apiServiceId || type,
           formData,
           styleSelections,
           additionalInfo,

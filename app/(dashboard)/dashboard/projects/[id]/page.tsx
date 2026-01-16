@@ -1,4 +1,5 @@
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
+import { CopyButton, DownloadButton, DeleteButton } from '@/components/dashboard/ProjectActions'
 import { requireUserId } from '@/lib/auth-utils'
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
@@ -70,15 +71,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-slate-900">Generated Content</h2>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(project.result || '')}
-                    className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center"
-                  >
-                    <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    Copy
-                  </button>
+                  <CopyButton text={project.result || ''} />
                 </div>
                 <div className="p-6">
                   <div className="prose prose-slate max-w-none">
@@ -176,19 +169,12 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
               <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-4">Actions</h3>
               <div className="space-y-3">
                 {project.result && (
-                  <button className="w-full flex items-center justify-center px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Download
-                  </button>
+                  <DownloadButton
+                    content={project.result}
+                    filename={`${project.name.replace(/\s+/g, '-').toLowerCase()}.txt`}
+                  />
                 )}
-                <button className="w-full flex items-center justify-center px-4 py-2 border border-red-200 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
-                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  Delete Project
-                </button>
+                <DeleteButton projectId={project.id} />
               </div>
             </div>
           </div>

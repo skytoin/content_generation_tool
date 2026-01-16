@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 const services = [
   {
@@ -109,6 +111,18 @@ const faqs = [
 
 export default function Home() {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const { data: session } = useSession()
+  const router = useRouter()
+
+  const handleServiceClick = (serviceId: string) => {
+    if (session) {
+      // Logged in - go to dashboard to create project
+      router.push(`/dashboard/projects/new/${serviceId}`)
+    } else {
+      // Not logged in - go to login with callback
+      router.push(`/login?callbackUrl=${encodeURIComponent(`/dashboard/projects/new/${serviceId}`)}`)
+    }
+  }
 
   return (
     <div>
@@ -132,11 +146,17 @@ export default function Home() {
               Get high-quality blog posts, social media content, email sequences, and SEO reports delivered to your inbox in hours, not weeks.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href="#services" className="btn-primary text-lg">
+              {session ? (
+                <button onClick={() => router.push('/dashboard/projects/new')} className="btn-primary text-lg">
+                  Create New Project
+                </button>
+              ) : (
+                <button onClick={() => router.push('/signup')} className="btn-primary text-lg">
+                  Get Started Free
+                </button>
+              )}
+              <a href="#services" className="btn-secondary text-lg">
                 View Services & Pricing
-              </a>
-              <a href="#how-it-works" className="btn-secondary text-lg">
-                See How It Works
               </a>
             </div>
             <div className="mt-12 flex items-center justify-center gap-8 text-sm text-slate-500">
@@ -223,16 +243,16 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <a
-                  href={`/services/${service.id}`}
+                <button
+                  onClick={() => handleServiceClick(service.id)}
                   className={`block w-full text-center py-3 px-6 rounded-xl font-semibold transition-all duration-200 ${
-                    service.popular 
-                      ? 'btn-primary' 
+                    service.popular
+                      ? 'btn-primary'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
-                  Order Now
-                </a>
+                  {session ? 'Create Project' : 'Get Started'}
+                </button>
               </div>
             ))}
           </div>
@@ -374,9 +394,12 @@ export default function Home() {
               <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
                 Join hundreds of businesses using ContentForge AI to create professional content at scale.
               </p>
-              <a href="#services" className="inline-block bg-white text-primary-600 font-bold py-4 px-8 rounded-xl hover:bg-slate-100 transition-colors shadow-xl">
-                Get Started Now
-              </a>
+              <button
+                onClick={() => session ? router.push('/dashboard/projects/new') : router.push('/signup')}
+                className="inline-block bg-white text-primary-600 font-bold py-4 px-8 rounded-xl hover:bg-slate-100 transition-colors shadow-xl"
+              >
+                {session ? 'Create New Project' : 'Get Started Now'}
+              </button>
             </div>
           </div>
         </div>

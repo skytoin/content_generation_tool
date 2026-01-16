@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { defaultStyleProfile } from './options'
+import { getCurrentUser } from '@/lib/auth-utils'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -10,7 +11,7 @@ const anthropic = new Anthropic({
 // MODEL STRATEGY
 // ============================================
 const MODELS = {
-  HAIKU: 'claude-haiku-4-5-20251101',     // Haiku for simple parsing/routing
+  HAIKU: 'claude-haiku-4-5-20251001',     // Haiku for simple parsing/routing
   SONNET: 'claude-sonnet-4-5-20250929',   // Sonnet for structured tasks
   OPUS: 'claude-opus-4-5-20251101'        // Opus for final revision only
 }
@@ -1055,10 +1056,22 @@ export async function POST(req: NextRequest) {
   try {
     const { serviceId, formData, styleSelections, additionalInfo } = await req.json()
 
+    // Check if user is authenticated and is admin for free usage
+    const user = await getCurrentUser()
+    const isAdmin = user?.isAdmin ?? false
+
+    // For non-admin users, payment verification would happen here
+    // Admin users can use services for free
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey || apiKey === 'sk-ant-dummy') {
       return NextResponse.json({ error: 'Add real ANTHROPIC_API_KEY to .env.local' }, { status: 400 })
     }
+
+    console.log(`🚀 Starting content generation for ${isAdmin ? 'ADMIN' : 'user'}: ${user.email}`)
 
     // ========== STAGE 0A: PROCESS ADDITIONAL INFO ==========
     console.log('📋 Stage 0A: Processing additional information...')
