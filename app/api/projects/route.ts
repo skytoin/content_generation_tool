@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { name, serviceType, tier, formData, styleSelections, additionalInfo } = body
+    const { name, serviceType, tier, lengthTier, formData, styleSelections, additionalInfo } = body
 
     if (!name || !serviceType) {
       return NextResponse.json(
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
         name,
         serviceType,
         tier: tier || 'premium',
+        lengthTier: lengthTier || 'standard',
         status: 'draft',
         formData: formData || null,
         styleSelections: styleSelections || null,

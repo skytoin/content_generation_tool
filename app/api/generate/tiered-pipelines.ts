@@ -154,7 +154,8 @@ export async function runBudgetPipeline(
   serviceId: string,
   formData: any,
   styleSelections: any,
-  additionalInfo: string
+  additionalInfo: string,
+  wordCountLimits: { min: number; max: number } = { min: 1500, max: 2500 }
 ): Promise<{ content: string }> {
   console.log('💰 BUDGET TIER: Starting content generation...')
 
@@ -237,9 +238,11 @@ export async function runBudgetPipeline(
 
   // ========== STAGE 1: PROMPT ENGINEER (GPT-4o mini) ==========
   console.log('🧠 Stage 1: Prompt Engineer (GPT-4o mini)...')
+  const blogDescription = `a ${wordCountLimits.min.toLocaleString()}-${wordCountLimits.max.toLocaleString()} word SEO-optimized blog article`
   const serviceContext: Record<string, string> = {
-    'blog-basic': 'a 1600-2000 word SEO-optimized blog article',
-    'blog-premium': 'a 3000-4000 word in-depth, authoritative blog article',
+    'blog-basic': blogDescription,
+    'blog-premium': blogDescription,
+    'blog-post': blogDescription,
     'social-pack': '30 social media posts (10 LinkedIn, 10 Twitter/X, 10 Instagram)',
     'email-sequence': 'a 5-email nurture/sales sequence',
     'seo-report': 'a comprehensive SEO audit with actionable recommendations',
@@ -387,7 +390,8 @@ export async function runStandardPipeline(
   serviceId: string,
   formData: any,
   styleSelections: any,
-  additionalInfo: string
+  additionalInfo: string,
+  wordCountLimits: { min: number; max: number } = { min: 1500, max: 2500 }
 ): Promise<{ content: string }> {
   console.log('⭐ STANDARD TIER: Starting content generation...')
 
@@ -470,9 +474,11 @@ export async function runStandardPipeline(
 
   // ========== STAGE 1: PROMPT ENGINEER (GPT-4.1) ==========
   console.log('🧠 Stage 1: Prompt Engineer (GPT-4.1)...')
+  const blogDescription = `a ${wordCountLimits.min.toLocaleString()}-${wordCountLimits.max.toLocaleString()} word SEO-optimized blog article`
   const serviceContext: Record<string, string> = {
-    'blog-basic': 'a 1600-2000 word SEO-optimized blog article',
-    'blog-premium': 'a 3000-4000 word in-depth, authoritative blog article',
+    'blog-basic': blogDescription,
+    'blog-premium': blogDescription,
+    'blog-post': blogDescription,
     'social-pack': '30 social media posts (10 LinkedIn, 10 Twitter/X, 10 Instagram)',
     'email-sequence': 'a 5-email nurture/sales sequence',
     'seo-report': 'a comprehensive SEO audit with actionable recommendations',

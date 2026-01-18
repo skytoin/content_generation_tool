@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { defaultStyleProfile } from './options'
 import { getCurrentUser } from '@/lib/auth-utils'
 import { runBudgetPipeline, runStandardPipeline } from './tiered-pipelines'
+import { getWordCountRange, type LengthTier } from '@/lib/pricing-config'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -593,18 +594,21 @@ Analyze these writing samples and extract the unique style patterns. Return the 
 // STAGE 1: PROMPT ENGINEER (Opus)
 // ============================================
 const createPromptEngineerTask = (
-  serviceId: string, 
-  customerInput: any, 
+  serviceId: string,
+  customerInput: any,
   styleProfile: any,
-  additionalInfoRouting: any
+  additionalInfoRouting: any,
+  wordCountLimits: { min: number; max: number } = { min: 1500, max: 2500 }
 ) => {
+  const blogDescription = `a ${wordCountLimits.min.toLocaleString()}-${wordCountLimits.max.toLocaleString()} word SEO-optimized blog article`
   const serviceContext: Record<string, string> = {
-    'blog-basic': 'a 1600-2000 word SEO-optimized blog article',
-    'blog-premium': 'a 3000-4000 word in-depth, authoritative blog article',
+    'blog-basic': blogDescription,
+    'blog-premium': blogDescription,
+    'blog-post': blogDescription,
     'social-pack': '30 social media posts (10 LinkedIn, 10 Twitter/X, 10 Instagram)',
     'email-sequence': 'a 5-email nurture/sales sequence',
     'seo-report': 'a comprehensive SEO audit with actionable recommendations',
-    'content-bundle': 'a complete content package (4 blogs at 3000-4000 words each + 30 social posts + email sequence)'
+    'content-bundle': 'a complete content package (4 blogs + 30 social posts + email sequence)'
   }
 
   return `<task>
@@ -1055,7 +1059,7 @@ No preamble. No explanations. Just the finished piece.
 // ============================================
 export async function POST(req: NextRequest) {
   try {
-    const { serviceId, formData, styleSelections, additionalInfo, tier = 'premium' } = await req.json()
+    const { serviceId, formData, styleSelections, additionalInfo, tier = 'premium', lengthTier = 'standard' } = await req.json()
 
     // Check if user is authenticated and is admin for free usage
     const user = await getCurrentUser()
@@ -1067,8 +1071,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
+    // Get word count limits based on length tier (for blog posts)
+    const wordCountLimits = getWordCountRange(lengthTier as LengthTier)
+    const isBlogPost = serviceId === 'blog-post' || serviceId === 'blog-basic' || serviceId === 'blog-premium'
+
     console.log(`🚀 Starting content generation for ${isAdmin ? 'ADMIN' : 'user'}: ${user.email}`)
-    console.log(`📦 Tier selected: ${tier.toUpperCase()}`)
+    console.log(`📦 Quality Tier: ${tier.toUpperCase()}`)
+    if (isBlogPost) {
+      console.log(`📏 Length Tier: ${lengthTier} (${wordCountLimits.min}-${wordCountLimits.max} words)`)
+    }
 
     // ============================================
     // TIER ROUTING - Route to appropriate pipeline
@@ -1079,7 +1090,7 @@ export async function POST(req: NextRequest) {
       if (!openaiKey) {
         return NextResponse.json({ error: 'OPENAI_API_KEY not configured for Budget tier' }, { status: 400 })
       }
-      const result = await runBudgetPipeline(serviceId, formData, styleSelections, additionalInfo)
+      const result = await runBudgetPipeline(serviceId, formData, styleSelections, additionalInfo, wordCountLimits)
       return NextResponse.json(result)
     }
 
@@ -1093,7 +1104,7 @@ export async function POST(req: NextRequest) {
       if (!anthropicKey || anthropicKey === 'sk-ant-dummy') {
         return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured for Standard tier' }, { status: 400 })
       }
-      const result = await runStandardPipeline(serviceId, formData, styleSelections, additionalInfo)
+      const result = await runStandardPipeline(serviceId, formData, styleSelections, additionalInfo, wordCountLimits)
       return NextResponse.json(result)
     }
 
@@ -1144,7 +1155,7 @@ export async function POST(req: NextRequest) {
       ] as any,
       messages: [{
         role: 'user',
-        content: createPromptEngineerTask(serviceId, formData, completeStyleProfile, additionalInfoResult.routing)
+        content: createPromptEngineerTask(serviceId, formData, completeStyleProfile, additionalInfoResult.routing, wordCountLimits)
       }]
     })
     

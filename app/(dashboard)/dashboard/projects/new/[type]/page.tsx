@@ -4,14 +4,16 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { StyleSelector } from '@/components/dashboard/StyleSelector'
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams, useParams } from 'next/navigation'
+import { LENGTH_TIERS, type LengthTier, type QualityTier } from '@/lib/pricing-config'
 
-const serviceConfigs: Record<string, { name: string; icon: string; description: string; apiServiceId?: string }> = {
+const serviceConfigs: Record<string, { name: string; icon: string; description: string; apiServiceId?: string; isBlogPost?: boolean }> = {
   // Standard dashboard types
   'blog-post': {
     name: 'Blog Post',
     icon: '📝',
     description: 'SEO-optimized articles for your website',
-    apiServiceId: 'blog-premium',
+    apiServiceId: 'blog-post',
+    isBlogPost: true,
   },
   'social-media': {
     name: 'Social Media Package',
@@ -31,18 +33,20 @@ const serviceConfigs: Record<string, { name: string; icon: string; description: 
     description: 'Comprehensive content strategy report',
     apiServiceId: 'seo-report',
   },
-  // Homepage service types
+  // Homepage service types (legacy - redirect to blog-post)
   'blog-basic': {
-    name: 'Blog Post - Basic',
+    name: 'Blog Post',
     icon: '📝',
-    description: '1600-2000 word SEO-optimized article',
-    apiServiceId: 'blog-basic',
+    description: 'SEO-optimized articles for your website',
+    apiServiceId: 'blog-post',
+    isBlogPost: true,
   },
   'blog-premium': {
-    name: 'Blog Post - Premium',
-    icon: '📚',
-    description: '3000-4000 word in-depth article with research',
-    apiServiceId: 'blog-premium',
+    name: 'Blog Post',
+    icon: '📝',
+    description: 'SEO-optimized articles for your website',
+    apiServiceId: 'blog-post',
+    isBlogPost: true,
   },
   'social-pack': {
     name: 'Social Media Pack',
@@ -58,11 +62,8 @@ const serviceConfigs: Record<string, { name: string; icon: string; description: 
   },
 }
 
-// Tier pricing configuration
-const tierPricing: Record<string, { budget: number; standard: number; premium: number }> = {
-  'blog-basic': { budget: 5, standard: 10, premium: 20 },
-  'blog-premium': { budget: 8, standard: 15, premium: 35 },
-  'blog-post': { budget: 8, standard: 15, premium: 35 },
+// Non-blog service pricing (blog uses length-based pricing from config)
+const servicePricing: Record<string, { budget: number; standard: number; premium: number }> = {
   'social-pack': { budget: 12, standard: 22, premium: 45 },
   'social-media': { budget: 12, standard: 22, premium: 45 },
   'email-sequence': { budget: 15, standard: 28, premium: 55 },
@@ -121,12 +122,22 @@ function ProjectForm() {
   })
   const [additionalInfo, setAdditionalInfo] = useState('')
   const [styleSelections, setStyleSelections] = useState<Record<string, string>>({})
-  const [selectedTier, setSelectedTier] = useState('standard')
+  const [selectedTier, setSelectedTier] = useState<QualityTier>('standard')
+  const [selectedLengthTier, setSelectedLengthTier] = useState<LengthTier>('standard')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Get pricing for current service type
-  const currentPricing = tierPricing[type] || tierPricing['blog-premium']
+  // Check if current service is a blog post
+  const isBlogPost = config.isBlogPost === true
+
+  // Get current price based on selections
+  const getCurrentPrice = (): number => {
+    if (isBlogPost) {
+      const lengthConfig = LENGTH_TIERS.find(t => t.id === selectedLengthTier)
+      return lengthConfig?.prices[selectedTier] ?? 0
+    }
+    return servicePricing[type]?.[selectedTier] ?? servicePricing['social-pack'][selectedTier]
+  }
 
   // Load existing project data if editing
   useEffect(() => {
@@ -137,6 +148,8 @@ function ProjectForm() {
           if (project.formData) setFormData(project.formData)
           if (project.styleSelections) setStyleSelections(project.styleSelections)
           if (project.additionalInfo) setAdditionalInfo(project.additionalInfo)
+          if (project.tier) setSelectedTier(project.tier as QualityTier)
+          if (project.lengthTier) setSelectedLengthTier(project.lengthTier as LengthTier)
         })
         .catch(console.error)
     }
@@ -162,8 +175,9 @@ function ProjectForm() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: projectName,
-            serviceType: type,
+            serviceType: config.apiServiceId || type,
             tier: selectedTier,
+            lengthTier: isBlogPost ? selectedLengthTier : 'standard',
             formData,
             styleSelections,
             additionalInfo,
@@ -206,6 +220,7 @@ function ProjectForm() {
           styleSelections,
           additionalInfo,
           tier: selectedTier,
+          lengthTier: isBlogPost ? selectedLengthTier : 'standard',
         }),
       })
 
@@ -367,6 +382,42 @@ function ProjectForm() {
           />
         </div>
 
+        {/* Length Tier Selection - Only for blog posts */}
+        {isBlogPost && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
+              <span className="text-xl">📏</span> Choose Article Length
+            </h2>
+            <p className="text-slate-500 text-sm mb-4">
+              Select how long you want your article to be
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {LENGTH_TIERS.map((tier) => (
+                <button
+                  key={tier.id}
+                  type="button"
+                  onClick={() => setSelectedLengthTier(tier.id)}
+                  className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                    selectedLengthTier === tier.id
+                      ? 'ring-2 ring-primary-500 border-primary-500 bg-primary-50'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  {tier.id === 'standard' && (
+                    <div className="absolute -top-2 -right-2">
+                      <span className="bg-primary-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                        Popular
+                      </span>
+                    </div>
+                  )}
+                  <h3 className="font-semibold text-slate-900 text-sm mb-1">{tier.name}</h3>
+                  <p className="text-xs text-slate-500">{tier.wordRange} words</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Tier Selection */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
@@ -376,34 +427,41 @@ function ProjectForm() {
             Select your preferred quality level and pricing
           </p>
           <div className="grid md:grid-cols-3 gap-4">
-            {tierConfigs.map((tier) => (
-              <button
-                key={tier.id}
-                type="button"
-                onClick={() => setSelectedTier(tier.id)}
-                className={`relative p-4 rounded-xl border-2 text-left transition-all ${
-                  selectedTier === tier.id
-                    ? tier.selectedColor
-                    : `${tier.color} border-transparent hover:border-slate-300`
-                }`}
-              >
-                {tier.popular && (
-                  <div className="absolute -top-2 -right-2">
-                    <span className="bg-blue-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
-                      Popular
+            {tierConfigs.map((tier) => {
+              // Calculate price based on tier and length selection
+              const tierPrice = isBlogPost
+                ? LENGTH_TIERS.find(t => t.id === selectedLengthTier)?.prices[tier.id as QualityTier] ?? 0
+                : servicePricing[type]?.[tier.id as QualityTier] ?? servicePricing['social-pack'][tier.id as QualityTier]
+
+              return (
+                <button
+                  key={tier.id}
+                  type="button"
+                  onClick={() => setSelectedTier(tier.id as QualityTier)}
+                  className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                    selectedTier === tier.id
+                      ? tier.selectedColor
+                      : `${tier.color} border-transparent hover:border-slate-300`
+                  }`}
+                >
+                  {tier.popular && (
+                    <div className="absolute -top-2 -right-2">
+                      <span className="bg-blue-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                        Popular
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-sm font-medium ${tier.textColor}`}>{tier.badge}</span>
+                    <span className={`text-xl font-bold ${tier.textColor}`}>
+                      ${tierPrice}
                     </span>
                   </div>
-                )}
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`text-sm font-medium ${tier.textColor}`}>{tier.badge}</span>
-                  <span className={`text-xl font-bold ${tier.textColor}`}>
-                    ${currentPricing[tier.id as keyof typeof currentPricing]}
-                  </span>
-                </div>
-                <h3 className="font-semibold text-slate-900 mb-1">{tier.name}</h3>
-                <p className="text-xs text-slate-600">{tier.description}</p>
-              </button>
-            ))}
+                  <h3 className="font-semibold text-slate-900 mb-1">{tier.name}</h3>
+                  <p className="text-xs text-slate-600">{tier.description}</p>
+                </button>
+              )
+            })}
           </div>
         </div>
 

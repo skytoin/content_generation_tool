@@ -3,11 +3,10 @@
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { LENGTH_TIERS, QUALITY_TIERS } from '@/lib/pricing-config'
 
-// Pricing tiers for each service type
+// Pricing tiers for non-blog service types
 const tierPricing: Record<string, { budget: number; standard: number; premium: number }> = {
-  'blog-basic': { budget: 5, standard: 10, premium: 20 },
-  'blog-premium': { budget: 8, standard: 15, premium: 35 },
   'social-pack': { budget: 12, standard: 22, premium: 45 },
   'email-sequence': { budget: 15, standard: 28, premium: 55 },
   'seo-report': { budget: 20, standard: 35, premium: 65 },
@@ -16,20 +15,13 @@ const tierPricing: Record<string, { budget: number; standard: number; premium: n
 
 const services = [
   {
-    id: 'blog-basic',
-    name: 'Blog Post - Basic',
-    description: '1600-2000 word SEO-optimized article on any topic',
-    deliverables: ['1 SEO-optimized article (1600-2000 words)', 'Meta description', 'H1/H2 structure', 'Same day delivery'],
+    id: 'blog-post',
+    name: 'Blog Post',
+    description: 'SEO-optimized articles with customizable length',
+    deliverables: ['SEO-optimized article', 'Meta description', 'H1/H2 structure', 'Internal linking suggestions', 'Same day delivery'],
     icon: '📝',
-    popular: false,
-  },
-  {
-    id: 'blog-premium',
-    name: 'Blog Post - Premium',
-    description: '3000-4000 word in-depth article with research',
-    deliverables: ['1 comprehensive article (3000-4000 words)', 'Meta description', 'Internal linking suggestions', 'Featured image prompts', 'Same day delivery'],
-    icon: '📚',
     popular: true,
+    isBlogPost: true, // Flag to use length-based pricing
   },
   {
     id: 'social-pack',
@@ -307,21 +299,38 @@ export default function Home() {
                 <h3 className="text-xl font-bold text-slate-900 mb-2">{service.name}</h3>
                 <p className="text-slate-600 text-sm mb-4">{service.description}</p>
 
-                {/* Tiered Pricing Display */}
-                <div className="mb-6 space-y-2">
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-green-50">
-                    <span className="text-sm font-medium text-green-700">💰 Budget</span>
-                    <span className="text-lg font-bold text-green-700">${tierPricing[service.id]?.budget}</span>
+                {/* Pricing Display */}
+                {'isBlogPost' in service && service.isBlogPost ? (
+                  <div className="mb-6">
+                    <div className="p-4 rounded-lg bg-gradient-to-r from-primary-50 to-accent-50 border border-primary-100">
+                      <div className="text-center">
+                        <span className="text-2xl font-bold text-primary-700">From $3</span>
+                        <span className="text-slate-600 text-sm block mt-1">Choose your length & quality tier</span>
+                      </div>
+                      <a
+                        href="#blog-pricing"
+                        className="block mt-3 text-center text-sm font-medium text-primary-600 hover:text-primary-700"
+                      >
+                        View Full Pricing Table ↓
+                      </a>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50 ring-1 ring-blue-200">
-                    <span className="text-sm font-medium text-blue-700">⭐ Standard</span>
-                    <span className="text-lg font-bold text-blue-700">${tierPricing[service.id]?.standard}</span>
+                ) : (
+                  <div className="mb-6 space-y-2">
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-green-50">
+                      <span className="text-sm font-medium text-green-700">💰 Budget</span>
+                      <span className="text-lg font-bold text-green-700">${tierPricing[service.id]?.budget}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50 ring-1 ring-blue-200">
+                      <span className="text-sm font-medium text-blue-700">⭐ Standard</span>
+                      <span className="text-lg font-bold text-blue-700">${tierPricing[service.id]?.standard}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50">
+                      <span className="text-sm font-medium text-purple-700">👑 Premium</span>
+                      <span className="text-lg font-bold text-purple-700">${tierPricing[service.id]?.premium}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50">
-                    <span className="text-sm font-medium text-purple-700">👑 Premium</span>
-                    <span className="text-lg font-bold text-purple-700">${tierPricing[service.id]?.premium}</span>
-                  </div>
-                </div>
+                )}
 
                 <ul className="space-y-3 mb-8">
                   {service.deliverables.map((item, i) => (
@@ -349,8 +358,111 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Blog Post Pricing Table */}
+      <section id="blog-pricing" className="py-20 bg-slate-50 scroll-mt-20">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
+              Blog Post Pricing
+            </h2>
+            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+              Choose your article length and quality tier. Longer content = more value for your readers.
+            </p>
+          </div>
+
+          {/* Pricing Table */}
+          <div className="glass rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-100">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">Length Tier</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-slate-900">Word Count</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-green-700">
+                      <span className="inline-flex items-center gap-1">💰 Budget</span>
+                    </th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-blue-700">
+                      <span className="inline-flex items-center gap-1">⭐ Standard</span>
+                    </th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-purple-700">
+                      <span className="inline-flex items-center gap-1">👑 Premium</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {LENGTH_TIERS.map((tier, index) => (
+                    <tr key={tier.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                      <td className="px-6 py-4">
+                        <span className="font-medium text-slate-900">{tier.name}</span>
+                      </td>
+                      <td className="px-6 py-4 text-center text-slate-600">
+                        {tier.wordRange} words
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-green-100 text-green-700 font-bold">
+                          ${tier.prices.budget}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-blue-100 text-blue-700 font-bold">
+                          ${tier.prices.standard}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-purple-100 text-purple-700 font-bold">
+                          ${tier.prices.premium}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Quality Tier Descriptions */}
+          <div className="mt-8 grid md:grid-cols-3 gap-6">
+            {QUALITY_TIERS.map((tier) => {
+              const colorClasses = {
+                budget: 'border-green-200 bg-green-50/50',
+                standard: 'border-blue-200 bg-blue-50/50',
+                premium: 'border-purple-200 bg-purple-50/50',
+              }
+              const textClasses = {
+                budget: 'text-green-700',
+                standard: 'text-blue-700',
+                premium: 'text-purple-700',
+              }
+              return (
+                <div key={tier.id} className={`rounded-xl border p-4 ${colorClasses[tier.id]}`}>
+                  <h4 className={`font-semibold mb-2 ${textClasses[tier.id]}`}>{tier.name}</h4>
+                  <p className="text-sm text-slate-600 mb-3">{tier.description}</p>
+                  <ul className="space-y-1">
+                    {tier.features.slice(0, 3).map((feature, i) => (
+                      <li key={i} className="text-xs text-slate-500 flex items-center gap-1">
+                        <span className="text-green-500">✓</span> {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* CTA */}
+          <div className="mt-10 text-center">
+            <button
+              onClick={() => handleServiceClick('blog-post')}
+              className="btn-primary text-lg"
+            >
+              {session ? 'Create Blog Post' : 'Get Started'}
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* How It Works */}
-      <section id="how-it-works" className="py-20 bg-slate-50 scroll-mt-20">
+      <section id="how-it-works" className="py-20 bg-white scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">

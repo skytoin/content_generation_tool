@@ -63,6 +63,8 @@ export async function PATCH(
     const {
       name,
       status,
+      tier,
+      lengthTier,
       formData,
       styleSelections,
       additionalInfo,
@@ -78,6 +80,8 @@ export async function PATCH(
       data: {
         ...(name !== undefined && { name }),
         ...(status !== undefined && { status }),
+        ...(tier !== undefined && { tier }),
+        ...(lengthTier !== undefined && { lengthTier }),
         ...(formData !== undefined && { formData }),
         ...(styleSelections !== undefined && { styleSelections }),
         ...(additionalInfo !== undefined && { additionalInfo }),

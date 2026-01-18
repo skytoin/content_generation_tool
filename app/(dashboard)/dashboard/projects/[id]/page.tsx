@@ -4,6 +4,7 @@ import { requireUserId } from '@/lib/auth-utils'
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { getLengthTier, type LengthTier } from '@/lib/pricing-config'
 
 interface ProjectPageProps {
   params: Promise<{ id: string }>
@@ -52,7 +53,17 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     }
   }
 
+  const getLengthBadge = (lengthTier: string) => {
+    const config = getLengthTier(lengthTier as LengthTier)
+    if (config) {
+      return { label: `📏 ${config.name}`, wordRange: config.wordRange }
+    }
+    return { label: '📏 Standard', wordRange: '1,500-2,500' }
+  }
+
   const tierInfo = getTierBadge((project as any).tier || 'premium')
+  const lengthInfo = getLengthBadge((project as any).lengthTier || 'standard')
+  const isBlogPost = project.serviceType === 'blog-post' || project.serviceType === 'blog-basic' || project.serviceType === 'blog-premium'
 
   return (
     <>
@@ -156,6 +167,17 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                     </span>
                   </dd>
                 </div>
+                {isBlogPost && (
+                  <div>
+                    <dt className="text-xs text-slate-500 uppercase">Length Tier</dt>
+                    <dd className="mt-1">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800">
+                        {lengthInfo.label}
+                      </span>
+                      <span className="block mt-1 text-xs text-slate-500">{lengthInfo.wordRange} words</span>
+                    </dd>
+                  </div>
+                )}
                 <div>
                   <dt className="text-xs text-slate-500 uppercase">Status</dt>
                   <dd className="mt-1">
