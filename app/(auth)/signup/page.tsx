@@ -74,7 +74,7 @@ export default function SignupPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <span className="text-2xl font-bold text-slate-800">ContentForge<span className="text-primary-500">AI</span></span>
+            <span className="text-2xl font-bold text-slate-800">Scrib<span className="text-primary-500">engine</span></span>
           </a>
         </div>
 

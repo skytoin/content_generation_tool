@@ -21,7 +21,7 @@ export const authOptions: NextAuthOptions = {
           pass: process.env.RESEND_API_KEY,
         },
       },
-      from: process.env.FROM_EMAIL || 'noreply@contentforge.ai',
+      from: process.env.FROM_EMAIL || 'noreply@scribengine.com',
     }),
   ],
   session: {

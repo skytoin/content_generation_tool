@@ -1,4 +1,4 @@
-# 🚀 ContentForge AI - QUICKSTART GUIDE
+# 🚀 Scribengine - QUICKSTART GUIDE
 
 ## Your AI Content Agency in 15 Minutes
 
@@ -34,7 +34,7 @@ You need 3 free accounts:
 
 ### Option A: Interactive Setup (Recommended)
 ```bash
-cd contentforge-ai
+cd scribengine
 npm install
 npm run setup
 ```
@@ -102,7 +102,7 @@ This is **critical** - it's what triggers content generation after payment!
 ## STEP 6: VERIFY EMAIL DOMAIN (Optional but Recommended)
 
 1. Go to https://resend.com/domains
-2. Add your domain (e.g., contentforge.ai)
+2. Add your domain (e.g., scribengine.com)
 3. Add the DNS records they provide
 4. Update `FROM_EMAIL` in Vercel to use your domain
 

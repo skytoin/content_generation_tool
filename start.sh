@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# ContentForge AI - One-Click Launcher
+# Scribengine - One-Click Launcher
 # This script sets up and launches your AI content agency
 
 echo ""
 echo "╔═══════════════════════════════════════════════════════════════╗"
 echo "║                                                               ║"
-echo "║              ContentForge AI - Quick Launcher                 ║"
+echo "║                Scribengine - Quick Launcher                   ║"
 echo "║                                                               ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo ""

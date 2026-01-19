@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
             currency: 'usd',
             product_data: {
               name: service.name,
-              description: `ContentForge AI - ${service.name}`,
+              description: `Scribengine - ${service.name}`,
             },
             unit_amount: service.price,
           },

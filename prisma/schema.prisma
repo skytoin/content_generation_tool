@@ -1,4 +1,4 @@
-// ContentForge AI - Database Schema
+// Scribengine - Database Schema
 // Using Prisma with PostgreSQL
 
 generator client {

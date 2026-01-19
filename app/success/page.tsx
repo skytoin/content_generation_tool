@@ -71,7 +71,7 @@ function SuccessContent() {
             </div>
             <div>
               <div className="font-medium text-slate-900">Need help?</div>
-              <div className="text-slate-500">Contact us at support@contentforge.ai</div>
+              <div className="text-slate-500">Contact us at support@scribengine.com</div>
             </div>
           </div>
         </div>

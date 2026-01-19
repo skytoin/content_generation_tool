@@ -1,4 +1,4 @@
-// ContentForge AI - Centralized Pricing Configuration
+// Scribengine - Centralized Pricing Configuration
 // This file contains all pricing information used across the application
 
 export type QualityTier = 'budget' | 'standard' | 'premium'

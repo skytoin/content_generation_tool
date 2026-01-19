@@ -30,7 +30,11 @@
       "Bash(docker stop:*)",
       "Bash(docker rm:*)",
       "WebSearch",
-      "Bash(npx prisma migrate dev:*)"
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(git -C \"C:\\\\Users\\\\skyto\\\\contentforge-ai\" log --oneline -15)",
+      "Bash(cmd //c \"cd /d C:\\\\Users\\\\skyto\\\\contentforge-ai && npm run build\")",
+      "Bash(cmd //c \"cd /d C:\\\\Users\\\\skyto\\\\contentforge-ai && npm run dev\")",
+      "Bash(timeout:*)"
     ]
   },
   "allowedTools": [

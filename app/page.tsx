@@ -5,6 +5,9 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { LENGTH_TIERS, QUALITY_TIERS } from '@/lib/pricing-config'
 
+// Beta mode - set to true to show beta version without claims/testimonials
+const IS_BETA_MODE = process.env.NEXT_PUBLIC_SITE_MODE === 'beta'
+
 // Pricing tiers for non-blog service types
 const tierPricing: Record<string, { budget: number; standard: number; premium: number }> = {
   'social-pack': { budget: 12, standard: 22, premium: 45 },
@@ -17,8 +20,8 @@ const services = [
   {
     id: 'blog-post',
     name: 'Blog Post',
-    description: 'SEO-optimized articles with customizable length',
-    deliverables: ['SEO-optimized article', 'Meta description', 'H1/H2 structure', 'Internal linking suggestions', 'Same day delivery'],
+    description: 'SEO-optimized articles that match your brand voice',
+    deliverables: ['SEO-optimized article', 'Learns your writing style', 'Customizable tone & format', 'Meta description', 'H1/H2 structure', 'Same day delivery'],
     icon: '📝',
     popular: true,
     isBlogPost: true, // Flag to use length-based pricing
@@ -26,16 +29,16 @@ const services = [
   {
     id: 'social-pack',
     name: 'Social Media Pack',
-    description: '30 posts across platforms for one month',
-    deliverables: ['10 LinkedIn posts', '10 Twitter/X posts', '10 Instagram captions', 'Hashtag research', 'Same day delivery'],
+    description: '30 posts matching your brand personality',
+    deliverables: ['10 LinkedIn posts', '10 Twitter/X posts', '10 Instagram captions', 'Learns your voice from samples', 'Customizable style options', 'Hashtag research'],
     icon: '📱',
     popular: false,
   },
   {
     id: 'email-sequence',
     name: 'Email Sequence',
-    description: '5-email nurture sequence for any goal',
-    deliverables: ['5 strategic emails', 'Subject line options', 'Call-to-action optimization', 'A/B testing suggestions', 'Same day delivery'],
+    description: '5-email sequence in your unique voice',
+    deliverables: ['5 strategic emails', 'Matches your brand tone', 'Subject line options', 'Call-to-action optimization', 'Style customization', 'A/B testing suggestions'],
     icon: '✉️',
     popular: false,
   },
@@ -43,15 +46,15 @@ const services = [
     id: 'seo-report',
     name: 'SEO Content Audit',
     description: 'Comprehensive content strategy report',
-    deliverables: ['Full site content audit', 'Keyword opportunity analysis', '10 article topic suggestions', 'Competitor content gaps', 'Same day delivery'],
+    deliverables: ['Full site content audit', 'Keyword opportunity analysis', '10 article topic suggestions', 'Competitor content gaps', 'Tailored recommendations', 'Same day delivery'],
     icon: '📊',
     popular: false,
   },
   {
     id: 'content-bundle',
     name: 'Monthly Content Bundle',
-    description: 'Everything you need for content marketing',
-    deliverables: ['4 premium blog posts', '30 social media posts', '1 email sequence', 'Content calendar', 'Priority support'],
+    description: 'Complete content package in your brand voice',
+    deliverables: ['4 premium blog posts', '30 social media posts', '1 email sequence', 'Style learning included', 'Consistent brand voice', 'Content calendar'],
     icon: '🚀',
     popular: true,
   },
@@ -89,7 +92,7 @@ const testimonials = [
   {
     name: 'Sarah Chen',
     role: 'Marketing Director, TechStart',
-    content: 'ContentForge AI has transformed our content strategy. We went from publishing 2 posts a month to 8, and our organic traffic increased 340%.',
+    content: 'Scribengine has transformed our content strategy. We went from publishing 2 posts a month to 8, and our organic traffic increased 340%.',
     avatar: 'SC',
   },
   {
@@ -112,6 +115,10 @@ const faqs = [
     a: 'We use advanced AI models combined with human editorial review to ensure quality, accuracy, and brand voice alignment. Every piece goes through quality checks before delivery.',
   },
   {
+    q: 'How does style learning work?',
+    a: 'Share sample content from your business and our AI analyzes your writing style, tone, and brand voice. This ensures all generated content feels authentically yours and maintains consistency across all pieces.',
+  },
+  {
     q: 'What\'s the turnaround time?',
     a: 'Most orders are delivered within 24-72 hours. Complex projects like SEO audits may take 5-7 business days. You\'ll receive an email notification when your content is ready.',
   },
@@ -129,7 +136,7 @@ const faqs = [
   },
   {
     q: 'How do I get started?',
-    a: 'Simply choose a service, fill out the brief form with your requirements, and complete payment. You\'ll receive your content via email within the stated timeframe.',
+    a: 'Simply choose a service, share your brand voice samples, fill out the brief form with your requirements, and complete payment. You\'ll receive customized content via email within the stated timeframe.',
   },
 ]
 
@@ -159,15 +166,15 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary-100 text-primary-700 text-sm font-medium mb-8">
-              <span className="animate-pulse mr-2">🔥</span>
-              <span>Over 10,000 pieces of content delivered</span>
+              <span className="animate-pulse mr-2">{IS_BETA_MODE ? '🚀' : '🔥'}</span>
+              <span>{IS_BETA_MODE ? 'Now Available - AI-Powered Content Generation' : 'Over 10,000 pieces of content delivered'}</span>
             </div>
             <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold text-slate-900 mb-6 leading-tight">
               Professional Content
               <span className="block text-gradient">Powered by AI</span>
             </h1>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10">
-              Get high-quality blog posts, social media content, email sequences, and SEO reports delivered to your inbox in hours, not weeks.
+              Get high-quality blog posts, social media content, and email sequences that match your unique brand voice. Our AI learns your style and delivers customized content in hours.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {session ? (
@@ -207,24 +214,51 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {[
-              { value: '10,000+', label: 'Content Pieces Delivered' },
-              { value: '500+', label: 'Happy Customers' },
-              { value: '4.9/5', label: 'Average Rating' },
-              { value: '<24h', label: 'Average Delivery Time' },
-            ].map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-3xl sm:text-4xl font-bold text-gradient mb-2">{stat.value}</div>
-                <div className="text-slate-600 text-sm">{stat.label}</div>
-              </div>
-            ))}
+      {/* Stats Section - Hidden in Beta Mode */}
+      {!IS_BETA_MODE && (
+        <section className="py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {[
+                { value: '10,000+', label: 'Content Pieces Delivered' },
+                { value: '500+', label: 'Happy Customers' },
+                { value: '4.9/5', label: 'Average Rating' },
+                { value: '<24h', label: 'Average Delivery Time' },
+              ].map((stat, i) => (
+                <div key={i} className="text-center">
+                  <div className="text-3xl sm:text-4xl font-bold text-gradient mb-2">{stat.value}</div>
+                  <div className="text-slate-600 text-sm">{stat.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Beta Mode - Technology Section */}
+      {IS_BETA_MODE && (
+        <section className="py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-slate-900 mb-4">Powered by Advanced AI Technology</h2>
+              <p className="text-slate-600 max-w-2xl mx-auto">Our platform leverages the latest AI models to generate high-quality, human-like content for your business.</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {[
+                { value: 'GPT-4o', label: 'OpenAI Models' },
+                { value: 'Claude', label: 'Anthropic Models' },
+                { value: 'Real-time', label: 'Web Research' },
+                { value: 'Fast', label: 'Delivery' },
+              ].map((stat, i) => (
+                <div key={i} className="text-center">
+                  <div className="text-3xl sm:text-4xl font-bold text-gradient mb-2">{stat.value}</div>
+                  <div className="text-slate-600 text-sm">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Pricing Tiers Section */}
       <section id="pricing" className="py-20 bg-slate-50 scroll-mt-20">
@@ -477,19 +511,19 @@ export default function Home() {
               {
                 step: '01',
                 title: 'Choose Your Service',
-                description: 'Select the content type you need—blog posts, social media, emails, or SEO reports.',
+                description: 'Select the content type you need—blog posts, social media, emails, or SEO reports. Pick your quality tier.',
                 icon: '🎯',
               },
               {
                 step: '02',
-                title: 'Share Your Brief',
-                description: 'Tell us about your business, target audience, and content goals. The more detail, the better.',
+                title: 'Share Your Style',
+                description: 'Tell us about your business and share sample content. Our AI learns your unique writing style and brand voice.',
                 icon: '📋',
               },
               {
                 step: '03',
-                title: 'Receive Your Content',
-                description: 'Get polished, ready-to-publish content delivered straight to your inbox.',
+                title: 'Receive Custom Content',
+                description: 'Get polished content that matches your brand voice, delivered straight to your inbox—ready to publish.',
                 icon: '✨',
               },
             ].map((item, i) => (
@@ -511,42 +545,74 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-              Trusted by Growing Businesses
-            </h2>
-            <p className="text-xl text-slate-600">
-              See what our customers have to say
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, i) => (
-              <div key={i} className="glass rounded-2xl p-8">
-                <div className="flex items-center gap-1 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <p className="text-slate-600 mb-6 italic">"{testimonial.content}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {testimonial.avatar}
+      {/* Testimonials - Hidden in Beta Mode */}
+      {!IS_BETA_MODE && (
+        <section className="py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
+                Trusted by Growing Businesses
+              </h2>
+              <p className="text-xl text-slate-600">
+                See what our customers have to say
+              </p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+              {testimonials.map((testimonial, i) => (
+                <div key={i} className="glass rounded-2xl p-8">
+                  <div className="flex items-center gap-1 mb-4">
+                    {[...Array(5)].map((_, j) => (
+                      <svg key={j} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
                   </div>
-                  <div>
-                    <div className="font-semibold text-slate-900">{testimonial.name}</div>
-                    <div className="text-sm text-slate-500">{testimonial.role}</div>
+                  <p className="text-slate-600 mb-6 italic">&quot;{testimonial.content}&quot;</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center text-white font-bold">
+                      {testimonial.avatar}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900">{testimonial.name}</div>
+                      <div className="text-sm text-slate-500">{testimonial.role}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Beta Mode - About Section (replaces testimonials) */}
+      {IS_BETA_MODE && (
+        <section className="py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
+                About Scribengine
+              </h2>
+              <p className="text-xl text-slate-600">
+                A new approach to content creation
+              </p>
+            </div>
+            <div className="max-w-3xl mx-auto glass rounded-2xl p-8">
+              <p className="text-slate-600 mb-6">
+                Scribengine was built to solve a common problem: creating high-quality content takes too long and costs too much. We combine the latest AI technology from OpenAI and Anthropic with carefully designed workflows to deliver professional, customized content at a fraction of the traditional cost.
+              </p>
+              <p className="text-slate-600 mb-6">
+                What sets us apart is our style learning technology. Share your existing content and our AI learns your unique writing style, tone, and brand voice. Every piece we generate feels authentically yours, maintaining consistency across all your content.
+              </p>
+              <p className="text-slate-600 mb-6">
+                Our multi-stage pipeline includes style analysis, research, customized writing, quality review, and revision - all automated to ensure consistent, on-brand output. Whether you need blog posts, social media content, email sequences, or SEO reports, our platform delivers content tailored to your voice.
+              </p>
+              <p className="text-slate-600">
+                Scribengine is a product of MISTTRADES, committed to making professional, personalized content accessible to businesses of all sizes.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* FAQ */}
       <section id="faq" className="py-20 bg-slate-50 scroll-mt-20">
@@ -591,10 +657,12 @@ export default function Home() {
             <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iYSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVHJhbnNmb3JtPSJyb3RhdGUoNDUpIj48cGF0aCBkPSJNLTEwIDMwaDYwdjJoLTYweiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2EpIi8+PC9zdmc+')] opacity-50" />
             <div className="relative z-10">
               <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                Ready to Scale Your Content?
+                {IS_BETA_MODE ? 'Ready to Try Scribengine?' : 'Ready to Scale Your Content?'}
               </h2>
               <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-                Join hundreds of businesses using ContentForge AI to create professional content at scale.
+                {IS_BETA_MODE
+                  ? 'Start creating professional content with our AI-powered platform today.'
+                  : 'Join hundreds of businesses using Scribengine to create professional content at scale.'}
               </p>
               <button
                 onClick={() => session ? router.push('/dashboard/projects/new') : router.push('/signup')}

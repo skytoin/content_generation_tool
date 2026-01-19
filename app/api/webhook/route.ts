@@ -298,10 +298,10 @@ async function generateContent(serviceId: string, formData: any): Promise<string
 }
 
 async function sendDeliveryEmail(email: string, serviceName: string, content: string, orderId: string) {
-  const fromEmail = process.env.FROM_EMAIL || 'orders@contentforge.ai'
+  const fromEmail = process.env.FROM_EMAIL || 'orders@scribengine.com'
   
   await resend.emails.send({
-    from: `ContentForge AI <${fromEmail}>`,
+    from: `Scribengine <${fromEmail}>`,
     to: email,
     subject: `Your ${serviceName} is Ready! - Order #${orderId}`,
     html: `
@@ -322,7 +322,7 @@ async function sendDeliveryEmail(email: string, serviceName: string, content: st
         <body>
           <div class="container">
             <div class="header">
-              <div class="logo">ContentForge<span style="color: #0ea5e9;">AI</span></div>
+              <div class="logo">Scrib<span style="color: #0ea5e9;">engine</span></div>
             </div>
             
             <h1 style="color: #0f172a;">Your Content is Ready! 🎉</h1>
@@ -343,9 +343,9 @@ async function sendDeliveryEmail(email: string, serviceName: string, content: st
             <a href="${process.env.NEXT_PUBLIC_SITE_URL}/#services" class="cta">Order More Content</a>
             
             <div class="footer">
-              <p>Thank you for choosing ContentForge AI!</p>
+              <p>Thank you for choosing Scribengine!</p>
               <p>Questions? Reply to this email anytime.</p>
-              <p style="margin-top: 20px; color: #cbd5e1;">© ${new Date().getFullYear()} ContentForge AI. All rights reserved.</p>
+              <p style="margin-top: 20px; color: #cbd5e1;">© ${new Date().getFullYear()} Scribengine. All rights reserved.</p>
             </div>
           </div>
         </body>

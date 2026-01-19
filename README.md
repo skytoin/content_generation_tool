@@ -1,8 +1,8 @@
-# ContentForge AI 🚀
+# Scribengine 🚀
 
 **A fully automated AI content agency that generates $3,000+/month while you sleep.**
 
-ContentForge AI is a complete, production-ready SaaS application that:
+Scribengine is a complete, production-ready SaaS application that:
 - Sells AI-powered content services (blog posts, social media, emails, SEO reports)
 - Handles payments automatically via Stripe
 - Generates content automatically using Claude AI
@@ -45,7 +45,7 @@ You need accounts with these services (all have free tiers to start):
 
 ```bash
 # Navigate to the project
-cd contentforge-ai
+cd scribengine
 
 # Install dependencies
 npm install
@@ -121,7 +121,7 @@ npm start
 ## 📁 Project Structure
 
 ```
-contentforge-ai/
+scribengine/
 ├── app/
 │   ├── api/
 │   │   ├── checkout/route.ts    # Stripe checkout creation

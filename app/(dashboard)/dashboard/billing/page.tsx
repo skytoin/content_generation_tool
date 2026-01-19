@@ -7,7 +7,7 @@ const plans = [
     name: 'Free',
     price: '$0',
     period: '/month',
-    description: 'Perfect for trying out ContentForge AI',
+    description: 'Perfect for trying out Scribengine',
     features: [
       '2 free projects',
       'Basic AI content generation',
