@@ -2,7 +2,6 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { getCurrentUser } from '@/lib/auth-utils'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { Project } from '@prisma/client'
 
 export default async function DashboardPage() {
   const user = await getCurrentUser()
@@ -116,7 +115,7 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="divide-y divide-slate-200">
-              {recentProjects.map((project: Project) => (
+              {recentProjects.map((project: { id: string; name: string; serviceType: string; status: string; createdAt: Date }) => (
                 <Link
                   key={project.id}
                   href={`/dashboard/projects/${project.id}`}
