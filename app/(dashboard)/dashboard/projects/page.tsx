@@ -82,7 +82,7 @@ export default async function ProjectsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
-                  {projects.map((project) => (
+                  {projects.map((project: { id: string; name: string; serviceType: string; status: string; createdAt: Date; wordCount?: number | null }) => (
                     <tr key={project.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
