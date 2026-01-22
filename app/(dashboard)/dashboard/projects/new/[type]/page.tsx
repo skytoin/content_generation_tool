@@ -6,6 +6,75 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams, useParams } from 'next/navigation'
 import { LENGTH_TIERS, type LengthTier, type QualityTier } from '@/lib/pricing-config'
 
+// Social media platform options
+const socialPlatforms = [
+  {
+    id: 'instagram',
+    name: 'Instagram',
+    icon: '📸',
+    description: 'Carousels, single posts, stories with captions & hashtags',
+    features: ['Caption optimization', 'Hashtag strategy', 'Alt text', 'Optional AI images'],
+  },
+  {
+    id: 'linkedin',
+    name: 'LinkedIn',
+    icon: '💼',
+    description: 'Professional posts for B2B engagement',
+    features: ['Professional tone', 'Thought leadership', 'Industry insights'],
+    comingSoon: true,
+  },
+  {
+    id: 'twitter',
+    name: 'Twitter/X',
+    icon: '🐦',
+    description: 'Threads and tweets for maximum engagement',
+    features: ['Thread optimization', 'Viral hooks', 'Hashtag strategy'],
+    comingSoon: true,
+  },
+  {
+    id: 'facebook',
+    name: 'Facebook',
+    icon: '👥',
+    description: 'Posts optimized for Facebook algorithm',
+    features: ['Engagement hooks', 'Community building', 'Share optimization'],
+    comingSoon: true,
+  },
+]
+
+// Instagram-specific options
+const instagramContentTypes = [
+  { id: 'carousel', name: 'Carousel', description: '114% more engagement', recommended: true },
+  { id: 'single_post', name: 'Single Post', description: 'One impactful image' },
+  { id: 'reels_cover', name: 'Reels Cover', description: '9:16 vertical format' },
+  { id: 'story', name: 'Story', description: 'Ephemeral content' },
+]
+
+const instagramImageStyles = [
+  { id: 'photography', name: 'Photography', hint: 'Realistic, professional photos' },
+  { id: 'illustration', name: 'Illustration', hint: 'Hand-drawn or digital art' },
+  { id: 'minimalist', name: 'Minimalist', hint: 'Clean, simple visuals' },
+  { id: '3d_render', name: '3D Render', hint: 'Three-dimensional graphics' },
+  { id: 'flat_design', name: 'Flat Design', hint: 'Simple shapes, bold colors' },
+]
+
+const instagramImageMoods = [
+  { id: 'professional', name: 'Professional' },
+  { id: 'playful', name: 'Playful' },
+  { id: 'elegant', name: 'Elegant' },
+  { id: 'bold', name: 'Bold' },
+  { id: 'calm', name: 'Calm' },
+  { id: 'energetic', name: 'Energetic' },
+]
+
+// Number of images options for carousel
+const carouselImageCounts = [
+  { count: 1, label: '1 Image', description: 'Cover slide only' },
+  { count: 3, label: '3 Images', description: 'Quick carousel' },
+  { count: 5, label: '5 Images', description: 'Standard carousel', recommended: true },
+  { count: 7, label: '7 Images', description: 'Detailed carousel' },
+  { count: 10, label: '10 Images', description: 'Maximum slides' },
+]
+
 const serviceConfigs: Record<string, { name: string; icon: string; description: string; apiServiceId?: string; isBlogPost?: boolean }> = {
   // Standard dashboard types
   'blog-post': {
@@ -127,6 +196,25 @@ function ProjectForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Social media platform selection
+  const [selectedPlatform, setSelectedPlatform] = useState<string>('')
+  const isSocialMedia = type === 'social-media'
+
+  // Instagram-specific options
+  const [instagramOptions, setInstagramOptions] = useState({
+    contentType: 'carousel' as string,
+    generateImages: false,
+    numberOfImages: 5,
+    imageStyle: 'photography' as string,
+    imageMood: 'professional' as string,
+    colorPreferences: '' as string,
+    subjectsToInclude: '' as string,
+    subjectsToAvoid: '' as string,
+    additionalImageNotes: '' as string,
+    referenceImages: [] as string[],
+    referenceImageInstructions: '' as string,
+  })
+
   // Check if current service is a blog post
   const isBlogPost = config.isBlogPost === true
 
@@ -161,10 +249,21 @@ function ProjectForm() {
       return
     }
 
+    // For social media, require platform selection
+    if (isSocialMedia && !selectedPlatform) {
+      setError('Please select a social media platform')
+      return
+    }
+
     setIsLoading(true)
     setError('')
 
     try {
+      // Determine service type based on platform selection
+      const effectiveServiceType = isSocialMedia && selectedPlatform === 'instagram'
+        ? 'instagram'
+        : config.apiServiceId || type
+
       // Create or update project
       let currentProjectId = projectId
 
@@ -175,10 +274,14 @@ function ProjectForm() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: projectName,
-            serviceType: config.apiServiceId || type,
+            serviceType: effectiveServiceType,
             tier: selectedTier,
             lengthTier: isBlogPost ? selectedLengthTier : 'standard',
-            formData,
+            formData: {
+              ...formData,
+              platform: selectedPlatform,
+              contentType: instagramOptions.contentType,
+            },
             styleSelections,
             additionalInfo,
           }),
@@ -195,7 +298,11 @@ function ProjectForm() {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            formData,
+            formData: {
+              ...formData,
+              platform: selectedPlatform,
+              contentType: instagramOptions.contentType,
+            },
             styleSelections,
             additionalInfo,
             status: 'processing',
@@ -210,44 +317,160 @@ function ProjectForm() {
         body: JSON.stringify({ status: 'processing' }),
       })
 
-      // Generate content
-      const generateRes = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serviceId: config.apiServiceId || type,
-          formData,
-          styleSelections,
-          additionalInfo,
-          tier: selectedTier,
-          lengthTier: isBlogPost ? selectedLengthTier : 'standard',
-        }),
-      })
+      let result: any
 
-      const result = await generateRes.json()
+      // Route to appropriate API based on platform
+      if (isSocialMedia && selectedPlatform === 'instagram') {
+        // Use Instagram-specific API
+        const generateRes = await fetch('/api/generate/instagram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            formData: {
+              company: formData.company,
+              industry: formData.goals || 'General',
+              topic: formData.topic,
+              audience: formData.audience,
+              goal: formData.goals,
+              contentType: instagramOptions.contentType,
+            },
+            styleSelections: {
+              ...styleSelections,
+              post_format: instagramOptions.contentType,
+            },
+            imageOptions: {
+              generateImages: instagramOptions.generateImages,
+              numberOfImages: instagramOptions.numberOfImages,
+              style: instagramOptions.imageStyle,
+              mood: instagramOptions.imageMood,
+              colorPreferences: instagramOptions.colorPreferences
+                ? instagramOptions.colorPreferences.split(',').map(s => s.trim())
+                : [],
+              subjectsToInclude: instagramOptions.subjectsToInclude
+                ? instagramOptions.subjectsToInclude.split(',').map(s => s.trim())
+                : [],
+              subjectsToAvoid: instagramOptions.subjectsToAvoid
+                ? instagramOptions.subjectsToAvoid.split(',').map(s => s.trim())
+                : [],
+              additionalImageNotes: instagramOptions.additionalImageNotes,
+              referenceImages: instagramOptions.referenceImages,
+              referenceImageInstructions: instagramOptions.referenceImageInstructions,
+            },
+            additionalInfo,
+          }),
+        })
 
-      if (result.error) {
-        throw new Error(result.error)
+        result = await generateRes.json()
+
+        if (result.error) {
+          throw new Error(result.error)
+        }
+
+        // Format Instagram result for display
+        const caption = result.content?.caption || ''
+        const hashtags = result.content?.hashtags?.join(' ') || ''
+        const altText = result.content?.altText || ''
+        const slides = result.content?.slides || []
+        const qualityScore = result.qualityReport?.totalScore || 0
+
+        // Build formatted content
+        let mainContent = `📸 INSTAGRAM CONTENT\n\n`
+        mainContent += `📝 CAPTION:\n${caption}\n\n`
+        mainContent += `#️⃣ HASHTAGS:\n${hashtags}\n\n`
+        mainContent += `🔍 ALT TEXT:\n${altText}\n\n`
+
+        if (slides.length > 0) {
+          mainContent += `📑 CAROUSEL SLIDES:\n`
+          slides.forEach((slide: any) => {
+            mainContent += `\n--- Slide ${slide.slideNumber} ---\n`
+            mainContent += `Headline: ${slide.headline}\n`
+            mainContent += `Subtext: ${slide.subtext}\n`
+            if (slide.visualDirection) {
+              mainContent += `Visual: ${slide.visualDirection}\n`
+            }
+          })
+          mainContent += '\n'
+        }
+
+        if (result.images?.length > 0) {
+          mainContent += `🖼️ GENERATED IMAGES:\n`
+          result.images.forEach((img: any) => {
+            mainContent += `Slide ${img.slideNumber}: ${img.imageUrl}\n`
+          })
+          mainContent += '\n'
+        }
+
+        const qualityReport = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 INSTAGRAM QUALITY REPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 QUALITY SCORE: ${qualityScore}/100
+
+📈 BREAKDOWN:
+• Caption Quality: ${result.qualityReport?.breakdown?.captionQuality || 0}/40
+• SEO & Discoverability: ${result.qualityReport?.breakdown?.seoDiscoverability || 0}/25
+• Visual Direction: ${result.qualityReport?.breakdown?.visualDirection || 0}/20
+• Engagement Potential: ${result.qualityReport?.breakdown?.engagementPotential || 0}/15
+
+💡 FEEDBACK:
+${result.qualityReport?.feedback?.join('\n') || 'No feedback available'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Built with: Instagram 8-Stage Pipeline (GPT-4.1 + GPT Image 1.5)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+
+        // Update project with result
+        await fetch(`/api/projects/${currentProjectId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            result: mainContent,
+            qualityReport,
+            wordCount: mainContent.split(/\s+/).length,
+            completedAt: new Date().toISOString(),
+          }),
+        })
+      } else {
+        // Use standard generate API
+        const generateRes = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            serviceId: config.apiServiceId || type,
+            formData,
+            styleSelections,
+            additionalInfo,
+            tier: selectedTier,
+            lengthTier: isBlogPost ? selectedLengthTier : 'standard',
+          }),
+        })
+
+        result = await generateRes.json()
+
+        if (result.error) {
+          throw new Error(result.error)
+        }
+
+        // Parse content and quality report
+        const content = result.content || ''
+        const reportStart = content.indexOf('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+        const mainContent = reportStart > 0 ? content.substring(0, reportStart).trim() : content
+        const qualityReport = reportStart > 0 ? content.substring(reportStart).trim() : ''
+
+        // Update project with result
+        await fetch(`/api/projects/${currentProjectId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            result: mainContent,
+            qualityReport,
+            wordCount: mainContent.split(/\s+/).length,
+            completedAt: new Date().toISOString(),
+          }),
+        })
       }
-
-      // Parse content and quality report
-      const content = result.content || ''
-      const reportStart = content.indexOf('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-      const mainContent = reportStart > 0 ? content.substring(0, reportStart).trim() : content
-      const qualityReport = reportStart > 0 ? content.substring(reportStart).trim() : ''
-
-      // Update project with result
-      await fetch(`/api/projects/${currentProjectId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: 'completed',
-          result: mainContent,
-          qualityReport,
-          wordCount: mainContent.split(/\s+/).length,
-          completedAt: new Date().toISOString(),
-        }),
-      })
 
       // Redirect to project view
       router.push(`/dashboard/projects/${currentProjectId}`)
@@ -269,6 +492,350 @@ function ProjectForm() {
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
             {error}
           </div>
+        )}
+
+        {/* Platform Selection - Only for Social Media */}
+        {isSocialMedia && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
+              <span className="text-xl">📱</span> Select Platform
+            </h2>
+            <p className="text-slate-500 text-sm mb-4">
+              Choose which social media platform to create content for
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {socialPlatforms.map((platform) => (
+                <button
+                  key={platform.id}
+                  type="button"
+                  onClick={() => !platform.comingSoon && setSelectedPlatform(platform.id)}
+                  disabled={platform.comingSoon}
+                  className={`relative flex items-start p-4 rounded-xl border-2 text-left transition-all ${
+                    platform.comingSoon
+                      ? 'border-slate-100 bg-slate-50 cursor-not-allowed opacity-60'
+                      : selectedPlatform === platform.id
+                        ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500'
+                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  {platform.comingSoon && (
+                    <span className="absolute top-2 right-2 text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">
+                      Coming Soon
+                    </span>
+                  )}
+                  <span className="text-3xl mr-4">{platform.icon}</span>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-slate-900">{platform.name}</h3>
+                    <p className="text-sm text-slate-500 mt-1">{platform.description}</p>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {platform.features.map((feature, idx) => (
+                        <span
+                          key={idx}
+                          className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full"
+                        >
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Instagram Options - Only when Instagram is selected */}
+        {isSocialMedia && selectedPlatform === 'instagram' && (
+          <>
+            {/* Content Type */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+              <h2 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-xl">📑</span> Content Type
+              </h2>
+              <p className="text-slate-500 text-sm mb-4">
+                Select the type of Instagram content to create
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {instagramContentTypes.map((contentType) => (
+                  <button
+                    key={contentType.id}
+                    type="button"
+                    onClick={() => setInstagramOptions({ ...instagramOptions, contentType: contentType.id })}
+                    className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                      instagramOptions.contentType === contentType.id
+                        ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {contentType.recommended && (
+                      <span className="absolute -top-2 -right-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
+                        Best
+                      </span>
+                    )}
+                    <h3 className="font-semibold text-slate-900 text-sm">{contentType.name}</h3>
+                    <p className="text-xs text-slate-500 mt-1">{contentType.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Image Generation Options */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+              <h2 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-xl">🖼️</span> Image Generation (Optional)
+              </h2>
+              <p className="text-slate-500 text-sm mb-4">
+                Generate AI images for your posts using DALL-E 3
+              </p>
+
+              {/* Toggle */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl mb-4">
+                <div>
+                  <p className="font-medium text-slate-900">Generate AI Images</p>
+                  <p className="text-sm text-slate-500">Creates custom images for each slide/post</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInstagramOptions({ ...instagramOptions, generateImages: !instagramOptions.generateImages })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    instagramOptions.generateImages ? 'bg-primary-500' : 'bg-slate-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      instagramOptions.generateImages ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Image Options (only show when enabled) */}
+              {instagramOptions.generateImages && (
+                <div className="space-y-4 pt-4 border-t border-slate-200">
+                  {/* Number of Images (for carousel) */}
+                  {instagramOptions.contentType === 'carousel' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Number of Images to Generate
+                      </label>
+                      <div className="grid grid-cols-5 gap-2">
+                        {carouselImageCounts.map((option) => (
+                          <button
+                            key={option.count}
+                            type="button"
+                            onClick={() => setInstagramOptions({ ...instagramOptions, numberOfImages: option.count })}
+                            className={`relative p-3 rounded-lg text-center transition-all ${
+                              instagramOptions.numberOfImages === option.count
+                                ? 'bg-primary-500 text-white'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                          >
+                            {option.recommended && (
+                              <span className="absolute -top-1 -right-1 text-xs bg-green-500 text-white px-1 rounded">
+                                ★
+                              </span>
+                            )}
+                            <span className="block font-semibold">{option.count}</span>
+                            <span className="text-xs opacity-75">images</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Image Style */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Image Style
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {instagramImageStyles.map((style) => (
+                        <button
+                          key={style.id}
+                          type="button"
+                          onClick={() => setInstagramOptions({ ...instagramOptions, imageStyle: style.id })}
+                          className={`px-4 py-2 rounded-lg text-sm transition-all ${
+                            instagramOptions.imageStyle === style.id
+                              ? 'bg-primary-500 text-white'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          {style.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Image Mood */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Image Mood
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {instagramImageMoods.map((mood) => (
+                        <button
+                          key={mood.id}
+                          type="button"
+                          onClick={() => setInstagramOptions({ ...instagramOptions, imageMood: mood.id })}
+                          className={`px-4 py-2 rounded-lg text-sm transition-all ${
+                            instagramOptions.imageMood === mood.id
+                              ? 'bg-primary-500 text-white'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          {mood.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Color Preferences */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Color Preferences (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={instagramOptions.colorPreferences}
+                      onChange={(e) => setInstagramOptions({ ...instagramOptions, colorPreferences: e.target.value })}
+                      placeholder="e.g., blue, white, gold"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+                    />
+                  </div>
+
+                  {/* Subjects to Include */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Subjects to Include (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={instagramOptions.subjectsToInclude}
+                      onChange={(e) => setInstagramOptions({ ...instagramOptions, subjectsToInclude: e.target.value })}
+                      placeholder="e.g., laptops, office, coffee"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+                    />
+                  </div>
+
+                  {/* Subjects to Avoid */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Subjects to Avoid (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={instagramOptions.subjectsToAvoid}
+                      onChange={(e) => setInstagramOptions({ ...instagramOptions, subjectsToAvoid: e.target.value })}
+                      placeholder="e.g., faces, text, logos"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+                    />
+                  </div>
+
+                  {/* Additional Notes */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Additional Image Notes
+                    </label>
+                    <textarea
+                      value={instagramOptions.additionalImageNotes}
+                      onChange={(e) => setInstagramOptions({ ...instagramOptions, additionalImageNotes: e.target.value })}
+                      placeholder="Any specific requirements for the generated images..."
+                      className="w-full px-4 py-2 h-20 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 resize-none"
+                    />
+                  </div>
+
+                  {/* Reference Images Section */}
+                  <div className="pt-4 border-t border-slate-200">
+                    <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                      <span>📷</span> Reference Images (Optional)
+                    </h3>
+                    <p className="text-xs text-slate-500 mb-3">
+                      Upload images you want the AI to use as style references. The AI will analyze these and create similar images.
+                    </p>
+
+                    {/* File Upload */}
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Upload Reference Images
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={async (e) => {
+                          const files = e.target.files
+                          if (!files) return
+
+                          const base64Images: string[] = []
+                          for (const file of Array.from(files)) {
+                            const reader = new FileReader()
+                            const base64 = await new Promise<string>((resolve) => {
+                              reader.onload = () => resolve(reader.result as string)
+                              reader.readAsDataURL(file)
+                            })
+                            base64Images.push(base64)
+                          }
+                          setInstagramOptions({
+                            ...instagramOptions,
+                            referenceImages: [...instagramOptions.referenceImages, ...base64Images]
+                          })
+                        }}
+                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                      />
+                    </div>
+
+                    {/* Preview uploaded images */}
+                    {instagramOptions.referenceImages.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-xs text-slate-600 mb-2">
+                          {instagramOptions.referenceImages.length} image(s) uploaded
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {instagramOptions.referenceImages.map((img, idx) => (
+                            <div key={idx} className="relative group">
+                              <img
+                                src={img}
+                                alt={`Reference ${idx + 1}`}
+                                className="w-16 h-16 object-cover rounded-lg border border-slate-200"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newImages = [...instagramOptions.referenceImages]
+                                  newImages.splice(idx, 1)
+                                  setInstagramOptions({ ...instagramOptions, referenceImages: newImages })
+                                }}
+                                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Instructions for how to use reference images */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        How should the AI use these images?
+                      </label>
+                      <textarea
+                        value={instagramOptions.referenceImageInstructions}
+                        onChange={(e) => setInstagramOptions({ ...instagramOptions, referenceImageInstructions: e.target.value })}
+                        placeholder="e.g., Match the color palette and minimalist style of these images. Use similar lighting and composition. Keep the same professional aesthetic..."
+                        className="w-full px-4 py-2 h-24 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 resize-none text-sm"
+                        disabled={instagramOptions.referenceImages.length === 0}
+                      />
+                      {instagramOptions.referenceImages.length === 0 && (
+                        <p className="text-xs text-slate-400 mt-1">Upload images first to provide instructions</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {/* Basic Information */}
@@ -475,13 +1042,13 @@ function ProjectForm() {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isLoading || !formData.topic || !formData.company || !formData.audience}
+            disabled={isLoading || !formData.topic || !formData.company || !formData.audience || (isSocialMedia && !selectedPlatform)}
             className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isLoading ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Generating (2-5 min)...
+                {selectedPlatform === 'instagram' ? 'Generating Instagram Content (1-3 min)...' : 'Generating (2-5 min)...'}
               </>
             ) : (
               <>
@@ -498,7 +1065,11 @@ function ProjectForm() {
           <div className="mt-6 text-center">
             <div className="inline-flex items-center gap-3 bg-primary-50 rounded-xl px-6 py-4 border border-primary-200">
               <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-primary-700">Running 8-stage premium pipeline...</span>
+              <span className="text-primary-700">
+                {selectedPlatform === 'instagram'
+                  ? 'Running Instagram 8-stage pipeline...'
+                  : 'Running 8-stage premium pipeline...'}
+              </span>
             </div>
           </div>
         )}

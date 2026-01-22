@@ -1,0 +1,86 @@
+// Test fixtures for project data
+
+export const completedProject = {
+  id: 'project-completed-id',
+  userId: 'regular-user-id',
+  name: 'Completed Blog Post',
+  serviceType: 'blog-post',
+  status: 'completed',
+  qualityTier: 'premium',
+  lengthTier: 'standard',
+  topic: 'AI Content Generation',
+  keywords: 'AI, content, automation',
+  style: 'professional',
+  wordCount: 2000,
+  content: 'This is the generated content...',
+  createdAt: new Date('2024-01-10'),
+  updatedAt: new Date('2024-01-10'),
+}
+
+export const processingProject = {
+  id: 'project-processing-id',
+  userId: 'regular-user-id',
+  name: 'Processing Email Sequence',
+  serviceType: 'email-sequence',
+  status: 'processing',
+  qualityTier: 'standard',
+  lengthTier: 'quick',
+  topic: 'Product Launch',
+  keywords: 'launch, email, marketing',
+  style: 'friendly',
+  wordCount: null,
+  content: null,
+  createdAt: new Date('2024-01-15'),
+  updatedAt: new Date('2024-01-15'),
+}
+
+export const pendingProject = {
+  id: 'project-pending-id',
+  userId: 'regular-user-id',
+  name: 'Pending SEO Report',
+  serviceType: 'seo-report',
+  status: 'pending',
+  qualityTier: 'budget',
+  lengthTier: 'long-form',
+  topic: 'Website Optimization',
+  keywords: 'SEO, optimization, ranking',
+  style: 'technical',
+  wordCount: null,
+  content: null,
+  createdAt: new Date('2024-01-20'),
+  updatedAt: new Date('2024-01-20'),
+}
+
+export const failedProject = {
+  id: 'project-failed-id',
+  userId: 'regular-user-id',
+  name: 'Failed Social Media',
+  serviceType: 'social-media',
+  status: 'failed',
+  qualityTier: 'premium',
+  lengthTier: 'quick',
+  topic: 'Brand Awareness',
+  keywords: 'social, branding',
+  style: 'casual',
+  wordCount: null,
+  content: null,
+  createdAt: new Date('2024-01-05'),
+  updatedAt: new Date('2024-01-05'),
+}
+
+export const adminProject = {
+  id: 'project-admin-id',
+  userId: 'admin-user-id',
+  name: 'Admin Test Project',
+  serviceType: 'blog-post',
+  status: 'completed',
+  qualityTier: 'premium',
+  lengthTier: 'deep-dive',
+  topic: 'Admin Testing',
+  keywords: 'admin, test',
+  style: 'professional',
+  wordCount: 5000,
+  content: 'Admin generated content...',
+  createdAt: new Date('2024-01-01'),
+  updatedAt: new Date('2024-01-01'),
+}

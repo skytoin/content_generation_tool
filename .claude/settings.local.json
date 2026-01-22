@@ -34,7 +34,14 @@
       "Bash(git -C \"C:\\\\Users\\\\skyto\\\\contentforge-ai\" log --oneline -15)",
       "Bash(cmd //c \"cd /d C:\\\\Users\\\\skyto\\\\contentforge-ai && npm run build\")",
       "Bash(cmd //c \"cd /d C:\\\\Users\\\\skyto\\\\contentforge-ai && npm run dev\")",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(npm --version:*)",
+      "Bash(node --version)",
+      "Bash(echo:*)",
+      "Bash(npm.cmd install:*)",
+      "Bash(npm.cmd run test:run:*)",
+      "WebFetch(domain:dataforseo.com)",
+      "WebFetch(domain:coefficient.io)"
     ]
   },
   "allowedTools": [

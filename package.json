@@ -7,7 +7,12 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "setup": "node scripts/setup.js"
+    "setup": "node scripts/setup.js",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:pipelines": "RUN_PIPELINE_TESTS=true vitest run tests/e2e/pipelines.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",
@@ -30,14 +35,19 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^20.14.11",
     "@types/pg": "^8.16.0",
     "@types/react": "^18.3.3",
     "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^4.5.2",
     "autoprefixer": "^10.4.19",
+    "jsdom": "^26.1.0",
     "postcss": "^8.4.39",
     "prisma": "^7.2.0",
     "tailwindcss": "^3.4.6",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.3",
+    "vitest": "^3.1.4"
   }
 }

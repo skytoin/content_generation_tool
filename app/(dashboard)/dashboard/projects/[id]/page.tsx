@@ -6,6 +6,29 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getLengthTier, type LengthTier } from '@/lib/pricing-config'
 
+// Helper function to extract image URLs from Instagram content
+function extractInstagramImages(content: string): { slideNumber: number; url: string }[] {
+  const images: { slideNumber: number; url: string }[] = []
+  const regex = /Slide\s+(\d+):\s+(https:\/\/[^\s]+)/g
+  let match
+
+  while ((match = regex.exec(content)) !== null) {
+    images.push({
+      slideNumber: parseInt(match[1], 10),
+      url: match[2]
+    })
+  }
+
+  return images
+}
+
+// Helper to check if project is Instagram type
+function isInstagramProject(serviceType: string, result: string | null): boolean {
+  return (serviceType === 'instagram' || serviceType === 'social-media') &&
+    result !== null &&
+    result.includes('INSTAGRAM CONTENT')
+}
+
 interface ProjectPageProps {
   params: Promise<{ id: string }>
 }
@@ -29,6 +52,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     switch (serviceType) {
       case 'blog-post': return '📝'
       case 'social-media': return '📱'
+      case 'instagram': return '📸'
       case 'email-sequence': return '📧'
       case 'seo-report': return '📊'
       default: return '📄'
@@ -64,6 +88,10 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const tierInfo = getTierBadge((project as any).tier || 'premium')
   const lengthInfo = getLengthBadge((project as any).lengthTier || 'standard')
   const isBlogPost = project.serviceType === 'blog-post' || project.serviceType === 'blog-basic' || project.serviceType === 'blog-premium'
+
+  // Check for Instagram project and extract images
+  const isInstagram = isInstagramProject(project.serviceType, project.result)
+  const instagramImages = isInstagram && project.result ? extractInstagramImages(project.result) : []
 
   return (
     <>
@@ -131,6 +159,49 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                     <p className="text-slate-500">Content generation has not started</p>
                   </>
                 )}
+              </div>
+            )}
+
+            {/* Instagram Images Gallery */}
+            {isInstagram && instagramImages.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-200">
+                  <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                    <span>🖼️</span> Generated Images ({instagramImages.length})
+                  </h2>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {instagramImages.map((image) => (
+                      <div key={image.slideNumber} className="relative group">
+                        <div className="aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={image.url}
+                            alt={`Slide ${image.slideNumber}`}
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          />
+                        </div>
+                        <div className="absolute top-2 left-2 bg-black/70 text-white text-xs font-medium px-2 py-1 rounded">
+                          Slide {image.slideNumber}
+                        </div>
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <a
+                            href={image.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-white text-slate-900 px-3 py-1.5 rounded-lg text-sm font-medium shadow-lg hover:bg-slate-100 transition-colors"
+                          >
+                            Open Full Size
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-4 text-xs text-slate-500">
+                    Note: These images are temporary and will expire. Download them to keep permanently.
+                  </p>
+                </div>
               </div>
             )}
 

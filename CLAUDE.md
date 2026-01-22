@@ -1,4 +1,17 @@
-Claude Code Configuration for JavaScript Projects
+Claude Code Configuration for Scribengine
+
+🚨 CRITICAL: TESTING PROTOCOL - MUST ASK ABOUT PIPELINE TESTS
+================================================================================
+When running tests, ALWAYS ask the user:
+"Do you want to run pipeline tests too? They make real API calls and cost money."
+
+- `npm run test:run` - Regular tests (free, fast) - RUN BY DEFAULT
+- `npm run test:pipelines` - Pipeline tests (COSTS MONEY, slow) - ASK FIRST
+
+NEVER run pipeline tests without explicit user confirmation.
+Pipeline tests call real OpenAI/Anthropic APIs and incur charges.
+================================================================================
+
 🚨 CRITICAL: JAVASCRIPT PARALLEL EXECUTION PATTERNS
 MANDATORY RULE: JavaScript projects require Node.js ecosystem coordination with npm/yarn parallel operations.
 
