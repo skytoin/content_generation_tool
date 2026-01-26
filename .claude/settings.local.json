@@ -41,7 +41,13 @@
       "Bash(npm.cmd install:*)",
       "Bash(npm.cmd run test:run:*)",
       "WebFetch(domain:dataforseo.com)",
-      "WebFetch(domain:coefficient.io)"
+      "WebFetch(domain:coefficient.io)",
+      "Bash(npx vitest:*)",
+      "Bash(npm run test:run:*)",
+      "Bash(npm test:*)",
+      "Bash(C:)",
+      "Bash(node node_modules/.bin/vitest:*)",
+      "Bash(node:*)"
     ]
   },
   "allowedTools": [

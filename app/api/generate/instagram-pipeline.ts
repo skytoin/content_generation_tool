@@ -18,6 +18,7 @@
 import OpenAI from 'openai'
 import { callOpenAI, OPENAI_MODELS } from './openai-client'
 import { InstagramStyleProfile, defaultInstagramStyleProfile } from './instagram-options'
+import { extractBrandDNA, enhanceImagePrompt, type BrandDNA } from './image-prompt-enhancer'
 
 // Lazy-load OpenAI client for image generation
 let imageClient: OpenAI | null = null
@@ -803,6 +804,16 @@ Each prompt should be detailed and specific for high-quality image generation.`
     console.log('🖼️ Stage 6: Image Generation (DALL-E 3)...')
     processingStages.push('Image Generation')
 
+    // Extract brand DNA for prompt enhancement
+    const brandDNA = extractBrandDNA(
+      formData.company,
+      formData.industry || '',
+      formData.topic,
+      formData.audience || '',
+      imageOptions.colorPreferences
+    )
+    console.log(`   Brand DNA: ${brandDNA.industry} industry detected`)
+
     // Limit to requested number of images
     const promptsToProcess = visualData.image_prompts.slice(0, numberOfImages)
 
@@ -814,6 +825,26 @@ Each prompt should be detailed and specific for high-quality image generation.`
       try {
         console.log(`   Generating image ${slideNumber}/${numberOfImages}...`)
 
+        // Determine slide purpose based on position
+        const slidePurpose: 'hook' | 'content' | 'cta' | 'general' =
+          slideNumber === 1 ? 'hook' :
+          slideNumber === numberOfImages ? 'cta' :
+          'content'
+
+        // Enhance the prompt with quality modifiers and brand DNA
+        const enhanced = enhanceImagePrompt({
+          basePrompt: imgPrompt.prompt,
+          slideNumber,
+          slidePurpose,
+          textContent: imgPrompt.text_overlay || architecture?.slides?.[i]?.headline,
+          brandDNA,
+          imageStyle: imageOptions.style,
+          imageMood: imageOptions.mood,
+          colorPreferences: imageOptions.colorPreferences,
+          isIdeogram: false,
+          aspectRatio: formData.contentType === 'story' ? 'portrait' : 'square',
+        })
+
         // Choose size based on content type
         const imageSize: '1024x1024' | '1024x1792' | '1792x1024' =
           formData.contentType === 'story' || formData.contentType === 'reels_cover'
@@ -821,18 +852,18 @@ Each prompt should be detailed and specific for high-quality image generation.`
             : '1024x1024' // Square for feed posts
 
         const result = await generateImage(
-          imgPrompt.prompt,
+          enhanced.prompt,
           imageSize,
           'hd'
         )
 
         generatedImages.push({
           slideNumber: slideNumber, // Use sequential number, not AI's number
-          prompt: imgPrompt.prompt,
+          prompt: enhanced.prompt,
           imageUrl: result.url,
           revisedPrompt: result.revisedPrompt
         })
-        console.log(`   ✅ Image ${slideNumber} generated`)
+        console.log(`   ✅ Image ${slideNumber} generated (quality score: ${enhanced.qualityScore})`)
       } catch (error) {
         console.log(`   ⚠️ Image ${slideNumber} failed:`, error)
       }

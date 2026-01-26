@@ -171,6 +171,41 @@ const tierConfigs = [
   },
 ]
 
+// Instagram-specific tier configurations with enhanced pipeline descriptions
+const instagramTierConfigs = [
+  {
+    id: 'budget',
+    name: 'Budget',
+    badge: '💰 Best Value',
+    description: 'GPT-4.1 pipeline, basic hashtags, DALL-E images',
+    features: ['8-stage pipeline', 'AI-generated hashtags', 'DALL-E 3 images'],
+    color: 'border-green-500 bg-green-50',
+    textColor: 'text-green-700',
+    selectedColor: 'ring-2 ring-green-500 bg-green-100',
+  },
+  {
+    id: 'standard',
+    name: 'Standard',
+    badge: '⭐ Recommended',
+    description: 'Claude Sonnet creative writing + real hashtag data',
+    features: ['10-stage pipeline', 'RiteTag API hashtags', 'Claude Sonnet captions', 'Hashtag strategist'],
+    color: 'border-blue-500 bg-blue-50',
+    textColor: 'text-blue-700',
+    selectedColor: 'ring-2 ring-blue-500 bg-blue-100',
+    popular: true,
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    badge: '👑 Top Quality',
+    description: 'Hook specialist + Ideogram text images + Visual director',
+    features: ['13-stage pipeline', 'Hook specialist agent', 'Ideogram for text slides', 'Visual director', 'Claude creative writing'],
+    color: 'border-purple-500 bg-purple-50',
+    textColor: 'text-purple-700',
+    selectedColor: 'ring-2 ring-purple-500 bg-purple-100',
+  },
+]
+
 function ProjectForm() {
   const router = useRouter()
   const params = useParams()
@@ -214,6 +249,9 @@ function ProjectForm() {
     referenceImages: [] as string[],
     referenceImageInstructions: '' as string,
   })
+
+  // Instagram tier selection (separate from blog tier)
+  const [instagramTier, setInstagramTier] = useState<QualityTier>('standard')
 
   // Check if current service is a blog post
   const isBlogPost = config.isBlogPost === true
@@ -268,20 +306,39 @@ function ProjectForm() {
       let currentProjectId = projectId
 
       if (!currentProjectId) {
-        // Create new project
+        // Create new project - include imageOptions for Instagram
+        const projectFormData = isSocialMedia && selectedPlatform === 'instagram'
+          ? {
+              ...formData,
+              platform: selectedPlatform,
+              contentType: instagramOptions.contentType,
+              // Store image options for regeneration
+              imageOptions: {
+                generateImages: instagramOptions.generateImages,
+                numberOfImages: instagramOptions.numberOfImages,
+                style: instagramOptions.imageStyle,
+                mood: instagramOptions.imageMood,
+                colorPreferences: instagramOptions.colorPreferences,
+                subjectsToInclude: instagramOptions.subjectsToInclude,
+                subjectsToAvoid: instagramOptions.subjectsToAvoid,
+                additionalImageNotes: instagramOptions.additionalImageNotes,
+              },
+            }
+          : {
+              ...formData,
+              platform: selectedPlatform,
+              contentType: instagramOptions.contentType,
+            }
+
         const createRes = await fetch('/api/projects', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: projectName,
             serviceType: effectiveServiceType,
-            tier: selectedTier,
+            tier: isSocialMedia && selectedPlatform === 'instagram' ? instagramTier : selectedTier,
             lengthTier: isBlogPost ? selectedLengthTier : 'standard',
-            formData: {
-              ...formData,
-              platform: selectedPlatform,
-              contentType: instagramOptions.contentType,
-            },
+            formData: projectFormData,
             styleSelections,
             additionalInfo,
           }),
@@ -326,6 +383,7 @@ function ProjectForm() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            tier: instagramTier, // Add tier for pipeline routing
             formData: {
               company: formData.company,
               industry: formData.goals || 'General',
@@ -392,13 +450,22 @@ function ProjectForm() {
           mainContent += '\n'
         }
 
+        // Store image URLs in a hidden format for gallery extraction (not displayed as text)
         if (result.images?.length > 0) {
-          mainContent += `🖼️ GENERATED IMAGES:\n`
+          mainContent += `\n<!-- IMAGE_DATA\n`
           result.images.forEach((img: any) => {
             mainContent += `Slide ${img.slideNumber}: ${img.imageUrl}\n`
           })
-          mainContent += '\n'
+          mainContent += `-->\n`
         }
+
+        // Determine pipeline description based on tier
+        const pipelineDescriptions: Record<string, string> = {
+          budget: 'Instagram 8-Stage Pipeline (GPT-4.1 + DALL-E 3)',
+          standard: 'Instagram 10-Stage Pipeline (Claude Sonnet + RiteTag + DALL-E 3)',
+          premium: 'Instagram 13-Stage Pipeline (Claude Sonnet + Hook Specialist + Ideogram + Visual Director)',
+        }
+        const pipelineDesc = pipelineDescriptions[instagramTier] || pipelineDescriptions.budget
 
         const qualityReport = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📊 INSTAGRAM QUALITY REPORT
@@ -416,7 +483,7 @@ function ProjectForm() {
 ${result.qualityReport?.feedback?.join('\n') || 'No feedback available'}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Built with: Instagram 8-Stage Pipeline (GPT-4.1 + GPT Image 1.5)
+Built with: ${pipelineDesc}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
 
         // Update project with result
@@ -579,13 +646,66 @@ Built with: Instagram 8-Stage Pipeline (GPT-4.1 + GPT Image 1.5)
               </div>
             </div>
 
+            {/* Instagram Quality Tier Selection */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+              <h2 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                <span className="text-xl">⚡</span> Choose Instagram Pipeline
+              </h2>
+              <p className="text-slate-500 text-sm mb-4">
+                Select your preferred quality level for Instagram content
+              </p>
+              <div className="grid md:grid-cols-3 gap-4">
+                {instagramTierConfigs.map((tier) => {
+                  const tierPrice = servicePricing['social-media']?.[tier.id as QualityTier] ?? 12
+
+                  return (
+                    <button
+                      key={tier.id}
+                      type="button"
+                      onClick={() => setInstagramTier(tier.id as QualityTier)}
+                      className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                        instagramTier === tier.id
+                          ? tier.selectedColor
+                          : `${tier.color} border-transparent hover:border-slate-300`
+                      }`}
+                    >
+                      {tier.popular && (
+                        <div className="absolute -top-2 -right-2">
+                          <span className="bg-blue-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                            Popular
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-sm font-medium ${tier.textColor}`}>{tier.badge}</span>
+                        <span className={`text-xl font-bold ${tier.textColor}`}>
+                          ${tierPrice}
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-slate-900 mb-1">{tier.name}</h3>
+                      <p className="text-xs text-slate-600 mb-2">{tier.description}</p>
+                      <ul className="space-y-1">
+                        {tier.features.map((feature, idx) => (
+                          <li key={idx} className="text-xs text-slate-500 flex items-center gap-1">
+                            <span className="text-green-500">✓</span> {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             {/* Image Generation Options */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
               <h2 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
                 <span className="text-xl">🖼️</span> Image Generation (Optional)
               </h2>
               <p className="text-slate-500 text-sm mb-4">
-                Generate AI images for your posts using DALL-E 3
+                {instagramTier === 'premium'
+                  ? 'Generate AI images using DALL-E 3 (photos) and Ideogram (text slides)'
+                  : 'Generate AI images for your posts using DALL-E 3'}
               </p>
 
               {/* Toggle */}
@@ -1048,7 +1168,9 @@ Built with: Instagram 8-Stage Pipeline (GPT-4.1 + GPT Image 1.5)
             {isLoading ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                {selectedPlatform === 'instagram' ? 'Generating Instagram Content (1-3 min)...' : 'Generating (2-5 min)...'}
+                {selectedPlatform === 'instagram'
+                  ? `Generating Instagram Content (${instagramTier === 'premium' ? '2-4' : instagramTier === 'standard' ? '1-3' : '1-2'} min)...`
+                  : 'Generating (2-5 min)...'}
               </>
             ) : (
               <>
@@ -1067,7 +1189,7 @@ Built with: Instagram 8-Stage Pipeline (GPT-4.1 + GPT Image 1.5)
               <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
               <span className="text-primary-700">
                 {selectedPlatform === 'instagram'
-                  ? 'Running Instagram 8-stage pipeline...'
+                  ? `Running Instagram ${instagramTier === 'premium' ? '13' : instagramTier === 'standard' ? '10' : '8'}-stage ${instagramTier} pipeline...`
                   : 'Running 8-stage premium pipeline...'}
               </span>
             </div>

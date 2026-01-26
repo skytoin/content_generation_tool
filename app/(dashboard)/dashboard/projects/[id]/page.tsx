@@ -1,5 +1,5 @@
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
-import { CopyButton, DownloadButton, DeleteButton } from '@/components/dashboard/ProjectActions'
+import { CopyButton, DownloadButton, DeleteButton, RegenerateButton } from '@/components/dashboard/ProjectActions'
 import { requireUserId } from '@/lib/auth-utils'
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
@@ -7,19 +7,26 @@ import Link from 'next/link'
 import { getLengthTier, type LengthTier } from '@/lib/pricing-config'
 
 // Helper function to extract image URLs from Instagram content
+// Looks for URLs in both visible text and hidden IMAGE_DATA comment
 function extractInstagramImages(content: string): { slideNumber: number; url: string }[] {
   const images: { slideNumber: number; url: string }[] = []
-  const regex = /Slide\s+(\d+):\s+(https:\/\/[^\s]+)/g
+  const regex = /Slide\s+(\d+):\s+(https:\/\/[^\s<]+)/g
   let match
 
   while ((match = regex.exec(content)) !== null) {
     images.push({
       slideNumber: parseInt(match[1], 10),
-      url: match[2]
+      url: match[2].replace(/\n$/, '') // Clean trailing newlines
     })
   }
 
   return images
+}
+
+// Helper function to remove hidden IMAGE_DATA comment from display
+function cleanContentForDisplay(content: string): string {
+  // Remove <!-- IMAGE_DATA ... --> block
+  return content.replace(/\n*<!--\s*IMAGE_DATA[\s\S]*?-->\s*/g, '').trim()
 }
 
 // Helper to check if project is Instagram type
@@ -126,7 +133,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 <div className="p-6">
                   <div className="prose prose-slate max-w-none">
                     <pre className="whitespace-pre-wrap font-sans text-sm text-slate-700 bg-slate-50 p-4 rounded-lg overflow-auto max-h-[600px]">
-                      {project.result}
+                      {cleanContentForDisplay(project.result)}
                     </pre>
                   </div>
                 </div>
@@ -276,10 +283,83 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
               </dl>
             </div>
 
+            {/* Input Settings */}
+            {project.formData && (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-4">Input Settings</h3>
+                <dl className="space-y-3 text-sm">
+                  {(project.formData as any).topic && (
+                    <div>
+                      <dt className="text-xs text-slate-500 uppercase">Topic</dt>
+                      <dd className="mt-1 text-slate-900">{(project.formData as any).topic}</dd>
+                    </div>
+                  )}
+                  {(project.formData as any).company && (
+                    <div>
+                      <dt className="text-xs text-slate-500 uppercase">Company</dt>
+                      <dd className="mt-1 text-slate-900">{(project.formData as any).company}</dd>
+                    </div>
+                  )}
+                  {(project.formData as any).audience && (
+                    <div>
+                      <dt className="text-xs text-slate-500 uppercase">Audience</dt>
+                      <dd className="mt-1 text-slate-900">{(project.formData as any).audience}</dd>
+                    </div>
+                  )}
+                  {(project.formData as any).goals && (
+                    <div>
+                      <dt className="text-xs text-slate-500 uppercase">Goals</dt>
+                      <dd className="mt-1 text-slate-900">{(project.formData as any).goals}</dd>
+                    </div>
+                  )}
+                  {(project.formData as any).contentType && (
+                    <div>
+                      <dt className="text-xs text-slate-500 uppercase">Content Type</dt>
+                      <dd className="mt-1 text-slate-900 capitalize">{(project.formData as any).contentType?.replace('_', ' ')}</dd>
+                    </div>
+                  )}
+                  {(project.formData as any).imageOptions && (
+                    <>
+                      <div>
+                        <dt className="text-xs text-slate-500 uppercase">Image Generation</dt>
+                        <dd className="mt-1 text-slate-900">
+                          {(project.formData as any).imageOptions.generateImages ? '✅ Enabled' : '❌ Disabled'}
+                        </dd>
+                      </div>
+                      {(project.formData as any).imageOptions.generateImages && (
+                        <>
+                          <div>
+                            <dt className="text-xs text-slate-500 uppercase">Image Count</dt>
+                            <dd className="mt-1 text-slate-900">{(project.formData as any).imageOptions.numberOfImages || 5}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs text-slate-500 uppercase">Image Style</dt>
+                            <dd className="mt-1 text-slate-900 capitalize">{(project.formData as any).imageOptions.style || 'photography'}</dd>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                </dl>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-4">Actions</h3>
               <div className="space-y-3">
+                {project.result && project.status === 'completed' && (
+                  <RegenerateButton
+                    projectId={project.id}
+                    serviceType={project.serviceType}
+                    formData={project.formData as any}
+                    styleSelections={project.styleSelections as any}
+                    additionalInfo={(project.additionalInfo as string) || ''}
+                    tier={(project as any).tier || 'standard'}
+                    lengthTier={(project as any).lengthTier || 'standard'}
+                    existingResult={project.result}
+                  />
+                )}
                 {project.result && (
                   <DownloadButton
                     content={project.result}

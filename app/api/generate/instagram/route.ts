@@ -4,14 +4,20 @@
  * POST /api/generate/instagram
  *
  * Generates Instagram content (captions, hashtags, and optionally images)
- * using the Instagram pipeline with OpenAI models.
+ * using tiered Instagram pipelines:
+ * - Budget: GPT-4.1 based (8 stages)
+ * - Standard: Claude Sonnet + RiteTag (10 stages)
+ * - Premium: Claude Sonnet + Hook Specialist + Ideogram (13 stages)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { runInstagramPipeline, InstagramFormData, InstagramImageOptions } from '../instagram-pipeline'
+import { runStandardInstagramPipeline, runPremiumInstagramPipeline } from '../instagram-tiered-pipelines'
 import { InstagramStyleProfile } from '../instagram-options'
+
+type InstagramTier = 'budget' | 'standard' | 'premium'
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,11 +35,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     const {
+      tier = 'budget', // Default to budget tier
       formData,
       styleSelections,
       imageOptions,
       additionalInfo
     }: {
+      tier?: InstagramTier
       formData: InstagramFormData
       styleSelections?: Partial<InstagramStyleProfile>
       imageOptions?: Partial<InstagramImageOptions>
@@ -71,18 +79,56 @@ export async function POST(request: NextRequest) {
       referenceImageInstructions: imageOptions?.referenceImageInstructions || ''
     }
 
+    // Validate tier
+    const validTiers: InstagramTier[] = ['budget', 'standard', 'premium']
+    const selectedTier: InstagramTier = validTiers.includes(tier) ? tier : 'budget'
+
+    const pipelineStages: Record<InstagramTier, number> = {
+      budget: 8,
+      standard: 10,
+      premium: 13,
+    }
+
     console.log('📸 Instagram API: Starting generation...')
+    console.log(`   Tier: ${selectedTier} (${pipelineStages[selectedTier]}-stage pipeline)`)
     console.log(`   Company: ${formData.company}`)
     console.log(`   Topic: ${formData.topic}`)
     console.log(`   Image Generation: ${finalImageOptions.generateImages ? 'Enabled' : 'Disabled'}`)
 
-    // Run the Instagram pipeline
-    const result = await runInstagramPipeline(
-      formData,
-      styleSelections || {},
-      finalImageOptions,
-      additionalInfo || ''
-    )
+    // Run the appropriate Instagram pipeline based on tier
+    let result
+    switch (selectedTier) {
+      case 'premium':
+        console.log('   Using Premium Pipeline: Claude Sonnet + Hook Specialist + Ideogram + Visual Director')
+        result = await runPremiumInstagramPipeline(
+          formData,
+          styleSelections || {},
+          finalImageOptions,
+          additionalInfo || ''
+        )
+        break
+
+      case 'standard':
+        console.log('   Using Standard Pipeline: Claude Sonnet + RiteTag + DALL-E 3')
+        result = await runStandardInstagramPipeline(
+          formData,
+          styleSelections || {},
+          finalImageOptions,
+          additionalInfo || ''
+        )
+        break
+
+      case 'budget':
+      default:
+        console.log('   Using Budget Pipeline: GPT-4.1 + DALL-E 3')
+        result = await runInstagramPipeline(
+          formData,
+          styleSelections || {},
+          finalImageOptions,
+          additionalInfo || ''
+        )
+        break
+    }
 
     console.log('📸 Instagram API: Generation complete!')
     console.log(`   Quality Score: ${result.qualityReport.totalScore}/100`)
@@ -140,12 +186,30 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     name: 'Instagram Content Generation API',
-    version: '1.0.0',
-    description: 'Generate Instagram content with AI',
+    version: '2.0.0',
+    description: 'Generate Instagram content with AI using tiered pipelines',
+    tiers: {
+      budget: {
+        stages: 8,
+        description: 'GPT-4.1 based pipeline with basic hashtag generation',
+        features: ['AI-generated hashtags', 'DALL-E 3 images'],
+      },
+      standard: {
+        stages: 10,
+        description: 'Claude Sonnet + RiteTag for enhanced content and real hashtag data',
+        features: ['Claude Sonnet captions', 'RiteTag API hashtags', 'Hashtag strategist agent', 'DALL-E 3 images'],
+      },
+      premium: {
+        stages: 13,
+        description: 'Full premium pipeline with specialized agents and Ideogram',
+        features: ['Hook specialist agent', 'Visual director agent', 'Claude Sonnet creative writing', 'Ideogram for text slides', 'DALL-E 3 for photo slides'],
+      },
+    },
     endpoints: {
       POST: {
         description: 'Generate Instagram content',
         body: {
+          tier: 'budget | standard | premium (default: budget)',
           formData: {
             company: 'string (required)',
             industry: 'string',
