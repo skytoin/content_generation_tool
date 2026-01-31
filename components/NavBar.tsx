@@ -3,22 +3,36 @@
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { useState } from 'react'
+import { ThemeSwitcher } from './ThemeSwitcher'
+import { useTheme } from '@/contexts/ThemeContext'
 
 export function NavBar() {
   const { data: session, status } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { theme } = useTheme()
 
   return (
     <nav className="fixed top-0 w-full z-50 glass">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <span className="text-xl font-bold text-slate-800">Scrib<span className="text-primary-500">engine</span></span>
+            {theme === 'premium-blend' ? (
+              // Premium Blend Logo
+              <span className="text-xl">
+                <span className="font-fraunces italic font-medium" style={{ color: '#c75d3a', fontFamily: 'Fraunces, serif' }}>Scrib</span>
+                <span className="font-semibold tracking-tight" style={{ fontFamily: 'DM Sans, sans-serif' }}>engine</span>
+              </span>
+            ) : (
+              // Original Logo
+              <>
+                <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <span className="text-xl font-bold text-slate-800">Scrib<span className="text-primary-500">engine</span></span>
+              </>
+            )}
           </Link>
 
           {/* Desktop Navigation */}
@@ -27,6 +41,8 @@ export function NavBar() {
             <a href="/#pricing" className="text-slate-600 hover:text-primary-600 transition-colors">Pricing</a>
             <a href="/#how-it-works" className="text-slate-600 hover:text-primary-600 transition-colors">How It Works</a>
             <a href="/#faq" className="text-slate-600 hover:text-primary-600 transition-colors">FAQ</a>
+
+            <ThemeSwitcher />
 
             {status === 'loading' ? (
               <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>

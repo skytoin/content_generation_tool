@@ -47,7 +47,12 @@ export function createMockUser(overrides: {
 }
 
 // Helper to set up authenticated session
-export function mockAuthenticatedSession(user?: Parameters<typeof createMockSession>[0]['user']) {
+export function mockAuthenticatedSession(user?: {
+  id?: string
+  email?: string
+  name?: string
+  image?: string
+}) {
   mockGetServerSession.mockResolvedValue(createMockSession({ user }))
 }
 

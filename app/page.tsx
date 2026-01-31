@@ -67,7 +67,7 @@ const tiers = [
     description: 'Great quality at the lowest price',
     badge: '💰 Best Value',
     color: 'from-green-500 to-emerald-500',
-    features: ['GPT-4o powered', '4 research queries', 'Standard quality checks', 'Fast delivery'],
+    features: ['Advanced language models', '4 research queries', 'Standard quality checks', 'Fast delivery'],
   },
   {
     id: 'standard',
@@ -75,16 +75,16 @@ const tiers = [
     description: 'Enhanced quality with premium finishing',
     badge: '⭐ Recommended',
     color: 'from-blue-500 to-indigo-500',
-    features: ['GPT-4o + Claude Sonnet', '7 research queries', 'Advanced quality checks', 'Professional polish'],
+    features: ['Premium language models', '7 research queries', 'Advanced quality checks', 'Professional polish'],
     popular: true,
   },
   {
     id: 'premium',
     name: 'Premium',
-    description: 'Best-in-class AI content generation',
+    description: 'Best-in-class content generation',
     badge: '👑 Top Quality',
     color: 'from-purple-500 to-pink-500',
-    features: ['Claude Opus 4.5 final edit', 'Live web search', 'Comprehensive research', 'Expert-level quality'],
+    features: ['Top-tier language models', 'Live web search', 'Comprehensive research', 'Expert-level quality'],
   },
 ]
 
@@ -240,13 +240,13 @@ export default function Home() {
         <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-4">Powered by Advanced AI Technology</h2>
-              <p className="text-slate-600 max-w-2xl mx-auto">Our platform leverages the latest AI models to generate high-quality, human-like content for your business.</p>
+              <h2 className="text-2xl font-bold text-slate-900 mb-4">Powered by Advanced Technology</h2>
+              <p className="text-slate-600 max-w-2xl mx-auto">Our platform leverages cutting-edge language models to generate high-quality, human-like content for your business.</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {[
-                { value: 'GPT-4o', label: 'OpenAI Models' },
-                { value: 'Claude', label: 'Anthropic Models' },
+                { value: 'Advanced', label: 'Language Models' },
+                { value: 'Style', label: 'Learning' },
                 { value: 'Real-time', label: 'Web Research' },
                 { value: 'Fast', label: 'Delivery' },
               ].map((stat, i) => (
@@ -584,31 +584,42 @@ export default function Home() {
         </section>
       )}
 
-      {/* Beta Mode - About Section (replaces testimonials) */}
+      {/* Beta Mode - Feature Highlights (replaces testimonials) */}
       {IS_BETA_MODE && (
         <section className="py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-                About Scribengine
+                Why Choose Scribengine
               </h2>
               <p className="text-xl text-slate-600">
-                A new approach to content creation
+                Professional content that matches your voice
               </p>
             </div>
-            <div className="max-w-3xl mx-auto glass rounded-2xl p-8">
-              <p className="text-slate-600 mb-6">
-                Scribengine was built to solve a common problem: creating high-quality content takes too long and costs too much. We combine the latest AI technology from OpenAI and Anthropic with carefully designed workflows to deliver professional, customized content at a fraction of the traditional cost.
-              </p>
-              <p className="text-slate-600 mb-6">
-                What sets us apart is our style learning technology. Share your existing content and our AI learns your unique writing style, tone, and brand voice. Every piece we generate feels authentically yours, maintaining consistency across all your content.
-              </p>
-              <p className="text-slate-600 mb-6">
-                Our multi-stage pipeline includes style analysis, research, customized writing, quality review, and revision - all automated to ensure consistent, on-brand output. Whether you need blog posts, social media content, email sequences, or SEO reports, our platform delivers content tailored to your voice.
-              </p>
-              <p className="text-slate-600">
-                Scribengine is a product of MISTTRADES, committed to making professional, personalized content accessible to businesses of all sizes.
-              </p>
+            <div className="grid md:grid-cols-3 gap-8">
+              {[
+                {
+                  icon: '🎯',
+                  title: 'Style Learning',
+                  description: 'Our technology learns your unique writing style from your existing content, ensuring every piece feels authentically yours.',
+                },
+                {
+                  icon: '⚡',
+                  title: 'Fast Delivery',
+                  description: 'Get professional content delivered in hours, not weeks. Our automated pipeline ensures consistent, high-quality output.',
+                },
+                {
+                  icon: '💎',
+                  title: 'Premium Quality',
+                  description: 'Multiple quality tiers to match your budget. Every piece goes through comprehensive quality checks before delivery.',
+                },
+              ].map((feature, i) => (
+                <div key={i} className="glass rounded-2xl p-8 text-center">
+                  <div className="text-5xl mb-4">{feature.icon}</div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
+                  <p className="text-slate-600">{feature.description}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -646,6 +657,36 @@ export default function Home() {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* About Scribengine Section */}
+      <section id="about" className="py-20 scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
+              About Scribengine
+            </h2>
+            <p className="text-xl text-slate-600">
+              A new approach to content creation
+            </p>
+          </div>
+          <div className="max-w-4xl mx-auto">
+            <div className="glass rounded-2xl p-8 md:p-12">
+              <p className="text-slate-600 mb-6 text-lg leading-relaxed">
+                Scribengine was built to solve a common problem: creating high-quality content takes too long and costs too much. We combine the latest technology with carefully designed workflows to deliver professional, customized content at a fraction of the traditional cost.
+              </p>
+              <p className="text-slate-600 mb-6 text-lg leading-relaxed">
+                What sets us apart is our <span className="font-semibold text-slate-900">style learning technology</span>. Share your existing content and our system learns your unique writing style, tone, and brand voice. Every piece we generate feels authentically yours, maintaining consistency across all your content.
+              </p>
+              <p className="text-slate-600 mb-6 text-lg leading-relaxed">
+                Our multi-stage pipeline includes style analysis, research, customized writing, quality review, and revision—all automated to ensure consistent, on-brand output. Whether you need blog posts, social media content, email sequences, or SEO reports, our platform delivers content tailored to your voice.
+              </p>
+              <p className="text-slate-600 text-lg leading-relaxed">
+                Scribengine is a product of <span className="font-semibold text-slate-900">MISTTRADES</span>, committed to making professional, personalized content accessible to businesses of all sizes.
+              </p>
+            </div>
           </div>
         </div>
       </section>

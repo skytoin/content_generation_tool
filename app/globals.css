@@ -1,3 +1,6 @@
+/* Premium Blend Font Import - must be at top */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=DM+Sans:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,17 +10,170 @@
   --background-start-rgb: 248, 250, 252;
   --background-end-rgb: 241, 245, 249;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+
+  /* Original theme colors */
+  --theme-bg: linear-gradient(135deg, rgb(248, 250, 252) 0%, rgb(241, 245, 249) 100%);
+  --theme-bg-solid: #f8fafc;
+  --theme-nav-bg: rgba(255, 255, 255, 0.8);
+  --theme-card-bg: rgba(255, 255, 255, 0.8);
+  --theme-section-alt-bg: #ffffff;
+  --theme-accent: #0ea5e9;
+  --theme-accent-hover: #0284c7;
+  --theme-accent-secondary: #d946ef;
+  --theme-text-primary: #0f172a;
+  --theme-text-secondary: #475569;
+  --theme-text-muted: #64748b;
+  --theme-border: rgba(255, 255, 255, 0.2);
+  --theme-footer-bg: #0f172a;
+}
+
+/* Premium Blend Theme */
+[data-theme="premium-blend"] {
+  --foreground-rgb: 26, 26, 26;
+  --background-start-rgb: 250, 249, 247;
+  --background-end-rgb: 250, 249, 247;
+
+  --theme-bg: #faf9f7;
+  --theme-bg-solid: #faf9f7;
+  --theme-nav-bg: rgba(250, 249, 247, 0.95);
+  --theme-card-bg: #ffffff;
+  --theme-section-alt-bg: #ffffff;
+  --theme-accent: #c75d3a;
+  --theme-accent-hover: #a84d2e;
+  --theme-accent-secondary: #7d8c6e;
+  --theme-text-primary: #1a1a1a;
+  --theme-text-secondary: #475569;
+  --theme-text-muted: #64748b;
+  --theme-border: rgba(0, 0, 0, 0.05);
+  --theme-footer-bg: #1a1a1a;
 }
 
 body {
   font-family: var(--font-sans);
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-    135deg,
-    rgb(var(--background-start-rgb)) 0%,
-    rgb(var(--background-end-rgb)) 100%
-  );
+  background: var(--theme-bg);
   min-height: 100vh;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Premium Blend Theme Typography */
+[data-theme="premium-blend"] body {
+  font-family: 'DM Sans', var(--font-sans);
+}
+
+[data-theme="premium-blend"] h1,
+[data-theme="premium-blend"] h2,
+[data-theme="premium-blend"] h3 {
+  font-family: 'Fraunces', serif;
+  font-weight: 400;
+}
+
+/* Premium Blend specific button styles */
+[data-theme="premium-blend"] .btn-primary {
+  background: var(--theme-accent);
+  box-shadow: 0 4px 14px rgba(199, 93, 58, 0.25);
+}
+
+[data-theme="premium-blend"] .btn-primary:hover {
+  background: var(--theme-accent-hover);
+  box-shadow: 0 6px 20px rgba(199, 93, 58, 0.35);
+}
+
+[data-theme="premium-blend"] .btn-secondary {
+  border-color: #e2e8f0;
+}
+
+[data-theme="premium-blend"] .btn-secondary:hover {
+  border-color: var(--theme-accent);
+  color: var(--theme-accent);
+}
+
+/* Premium Blend gradient text override */
+[data-theme="premium-blend"] .text-gradient {
+  background: linear-gradient(135deg, var(--theme-accent), var(--theme-accent-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Premium Blend glass effect */
+[data-theme="premium-blend"] .glass {
+  background: var(--theme-card-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--theme-border);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+/* Premium Blend card hover */
+[data-theme="premium-blend"] .card-hover:hover {
+  border-color: var(--theme-accent);
+  box-shadow: 0 10px 40px rgba(199, 93, 58, 0.1);
+}
+
+/* Premium Blend nav styling */
+[data-theme="premium-blend"] nav.glass {
+  background: var(--theme-nav-bg);
+}
+
+/* Premium Blend primary color overrides */
+[data-theme="premium-blend"] .text-primary-500,
+[data-theme="premium-blend"] .text-primary-600,
+[data-theme="premium-blend"] .text-primary-400 {
+  color: var(--theme-accent) !important;
+}
+
+[data-theme="premium-blend"] .bg-primary-500,
+[data-theme="premium-blend"] .bg-primary-600 {
+  background-color: var(--theme-accent) !important;
+}
+
+[data-theme="premium-blend"] .from-primary-500 {
+  --tw-gradient-from: var(--theme-accent) !important;
+}
+
+[data-theme="premium-blend"] .to-accent-500,
+[data-theme="premium-blend"] .to-accent-600 {
+  --tw-gradient-to: var(--theme-accent-secondary) !important;
+}
+
+[data-theme="premium-blend"] .ring-primary-500 {
+  --tw-ring-color: var(--theme-accent) !important;
+}
+
+[data-theme="premium-blend"] .border-primary-500 {
+  border-color: var(--theme-accent) !important;
+}
+
+/* Premium Blend accent color overrides */
+[data-theme="premium-blend"] .bg-accent-500,
+[data-theme="premium-blend"] .bg-accent-600 {
+  background-color: var(--theme-accent-secondary) !important;
+}
+
+/* Premium Blend footer */
+[data-theme="premium-blend"] footer.bg-slate-900 {
+  background-color: var(--theme-footer-bg) !important;
+}
+
+/* Premium Blend section backgrounds */
+[data-theme="premium-blend"] .bg-white,
+[data-theme="premium-blend"] section.bg-white {
+  background-color: var(--theme-section-alt-bg) !important;
+}
+
+[data-theme="premium-blend"] .bg-slate-50,
+[data-theme="premium-blend"] section.bg-slate-50 {
+  background-color: var(--theme-bg-solid) !important;
+}
+
+/* Premium Blend hero gradient override */
+[data-theme="premium-blend"] .bg-gradient-to-br.from-primary-50 {
+  background: var(--theme-bg-solid) !important;
+}
+
+/* Premium Blend CTA section */
+[data-theme="premium-blend"] .bg-gradient-to-r.from-primary-600.to-accent-600 {
+  background: linear-gradient(135deg, var(--theme-accent), #a84d2e) !important;
 }
 
 @layer utilities {
