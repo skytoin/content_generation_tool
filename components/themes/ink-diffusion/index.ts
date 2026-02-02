@@ -48,3 +48,7 @@ export {
   InkPricingConfigurator,
   InkAnalytics,
 } from './pages'
+
+// Homepage
+export { InkHomepage } from './homepage'
+export * from './homepage/icons/InkIcons'

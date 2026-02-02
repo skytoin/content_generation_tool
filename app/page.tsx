@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { LENGTH_TIERS, QUALITY_TIERS } from '@/lib/pricing-config'
+import { useTheme } from '@/contexts/ThemeContext'
+import { InkHomepage } from '@/components/themes/ink-diffusion'
 
 // Beta mode - set to true to show beta version without claims/testimonials
 const IS_BETA_MODE = process.env.NEXT_PUBLIC_SITE_MODE === 'beta'
@@ -144,6 +146,12 @@ export default function Home() {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const { data: session } = useSession()
   const router = useRouter()
+  const { theme } = useTheme()
+
+  // Render Ink Diffusion homepage when theme is 'ink-diffusion'
+  if (theme === 'ink-diffusion') {
+    return <InkHomepage />
+  }
 
   const handleServiceClick = (serviceId: string) => {
     if (session) {
