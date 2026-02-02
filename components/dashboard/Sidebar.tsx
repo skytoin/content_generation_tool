@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { UISwitcherCompact } from '@/components/UISwitcher'
 
 const navigation = [
   {
@@ -97,6 +98,11 @@ export function Sidebar() {
           </Link>
         ))}
       </nav>
+
+      {/* UI Switcher */}
+      <div className="px-3 pb-4">
+        <UISwitcherCompact />
+      </div>
 
       {/* User section */}
       <div className="p-4 border-t border-slate-200">

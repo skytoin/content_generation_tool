@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Providers } from '@/components/Providers'
 import { NavBar } from '@/components/NavBar'
 import { Footer } from '@/components/Footer'
+import { MainContent } from '@/components/MainContent'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -24,11 +25,9 @@ export default function RootLayout({
     <html lang="en">
       <body className="font-sans">
         <Providers>
-        <NavBar />
-        <main className="pt-16">
-          {children}
-        </main>
-        <Footer />
+          <NavBar />
+          <MainContent>{children}</MainContent>
+          <Footer />
         </Providers>
       </body>
     </html>

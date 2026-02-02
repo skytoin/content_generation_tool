@@ -1,9 +1,16 @@
 'use client'
 
 import { useTheme } from '@/contexts/ThemeContext'
+import { usePathname } from 'next/navigation'
 
 export function Footer() {
   const { theme } = useTheme()
+  const pathname = usePathname()
+
+  // Hide footer on dashboard pages
+  if (pathname?.startsWith('/dashboard')) {
+    return null
+  }
 
   return (
     <footer className="bg-slate-900 text-white py-16 mt-20">

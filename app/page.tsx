@@ -275,11 +275,11 @@ export default function Home() {
             {tiers.map((tier) => (
               <div
                 key={tier.id}
-                className={`relative glass rounded-2xl p-8 card-hover ${tier.popular ? 'ring-2 ring-primary-500 scale-105' : ''}`}
+                className={`relative glass rounded-2xl p-8 card-hover ${tier.popular ? 'ring-2 ring-primary-500 scale-105 mt-4' : ''}`}
               >
                 {tier.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-primary-500 to-accent-500 text-white text-sm font-medium px-4 py-1 rounded-full">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                    <span className="bg-gradient-to-r from-primary-500 to-accent-500 text-white text-sm font-medium px-4 py-1.5 rounded-full shadow-lg">
                       Most Popular
                     </span>
                   </div>
@@ -320,11 +320,11 @@ export default function Home() {
             {services.map((service) => (
               <div
                 key={service.id}
-                className={`relative glass rounded-2xl p-8 card-hover ${service.popular ? 'pricing-popular ring-2 ring-primary-500' : ''}`}
+                className={`relative glass rounded-2xl p-8 card-hover ${service.popular ? 'pricing-popular ring-2 ring-primary-500 mt-4' : ''}`}
               >
                 {service.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-primary-500 to-accent-500 text-white text-sm font-medium px-4 py-1 rounded-full">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                    <span className="bg-gradient-to-r from-primary-500 to-accent-500 text-white text-sm font-medium px-4 py-1.5 rounded-full shadow-lg">
                       Most Popular
                     </span>
                   </div>

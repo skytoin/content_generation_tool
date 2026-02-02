@@ -47,7 +47,11 @@
       "Bash(npm test:*)",
       "Bash(C:)",
       "Bash(node node_modules/.bin/vitest:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "mcp__serena__list_memories",
+      "mcp__filesystem__directory_tree",
+      "mcp__filesystem__list_directory",
+      "mcp__filesystem__read_text_file"
     ]
   },
   "allowedTools": [

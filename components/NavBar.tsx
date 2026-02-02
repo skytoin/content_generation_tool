@@ -3,6 +3,7 @@
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { ThemeSwitcher } from './ThemeSwitcher'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -10,6 +11,12 @@ export function NavBar() {
   const { data: session, status } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { theme } = useTheme()
+  const pathname = usePathname()
+
+  // Hide navbar on dashboard pages (dashboard has its own sidebar navigation)
+  if (pathname?.startsWith('/dashboard')) {
+    return null
+  }
 
   return (
     <nav className="fixed top-0 w-full z-50 glass">

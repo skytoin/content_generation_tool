@@ -3,8 +3,37 @@
 import { useTheme } from '@/contexts/ThemeContext'
 import { useState } from 'react'
 
+type Theme = 'original' | 'premium-blend' | 'ink-diffusion'
+
+const themes: { id: Theme; name: string; description: string; gradient: string; activeClass: string; checkColor: string }[] = [
+  {
+    id: 'original',
+    name: 'Original',
+    description: 'Blue & magenta theme',
+    gradient: 'from-sky-400 to-fuchsia-500',
+    activeClass: 'bg-primary-50 text-primary-700',
+    checkColor: 'text-primary-500',
+  },
+  {
+    id: 'premium-blend',
+    name: 'Premium Blend',
+    description: 'Warm cream & terracotta',
+    gradient: 'from-orange-400 to-green-600',
+    activeClass: 'bg-orange-50 text-orange-700',
+    checkColor: 'text-orange-500',
+  },
+  {
+    id: 'ink-diffusion',
+    name: 'Ink Diffusion',
+    description: 'Burgundy & gold elegance',
+    gradient: 'from-[#722F37] to-[#D4AF37]',
+    activeClass: 'bg-[#722F37]/10 text-[#722F37]',
+    checkColor: 'text-[#722F37]',
+  },
+]
+
 export function ThemeSwitcher() {
-  const { theme, toggleTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -31,55 +60,35 @@ export function ThemeSwitcher() {
           {/* Dropdown */}
           <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 z-50 overflow-hidden">
             <div className="p-2">
-              <button
-                onClick={() => {
-                  if (theme !== 'original') toggleTheme()
-                  setIsOpen(false)
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  theme === 'original'
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'hover:bg-slate-50 text-slate-700'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 to-fuchsia-500 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">O</span>
-                </div>
-                <div className="text-left">
-                  <div className="font-medium text-sm">Original</div>
-                  <div className="text-xs text-slate-500">Blue & magenta theme</div>
-                </div>
-                {theme === 'original' && (
-                  <svg className="w-4 h-4 ml-auto text-primary-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                )}
-              </button>
-
-              <button
-                onClick={() => {
-                  if (theme !== 'premium-blend') toggleTheme()
-                  setIsOpen(false)
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors mt-1 ${
-                  theme === 'premium-blend'
-                    ? 'bg-orange-50 text-orange-700'
-                    : 'hover:bg-slate-50 text-slate-700'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-green-600 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">P</span>
-                </div>
-                <div className="text-left">
-                  <div className="font-medium text-sm">Premium Blend</div>
-                  <div className="text-xs text-slate-500">Warm cream & terracotta</div>
-                </div>
-                {theme === 'premium-blend' && (
-                  <svg className="w-4 h-4 ml-auto text-orange-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                )}
-              </button>
+              {themes.map((t, index) => (
+                <button
+                  key={t.id}
+                  onClick={() => {
+                    setTheme(t.id)
+                    setIsOpen(false)
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                    index > 0 ? 'mt-1' : ''
+                  } ${
+                    theme === t.id
+                      ? t.activeClass
+                      : 'hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${t.gradient} flex items-center justify-center`}>
+                    <span className="text-white text-xs font-bold">{t.name.charAt(0)}</span>
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="font-medium text-sm">{t.name}</div>
+                    <div className="text-xs text-slate-500">{t.description}</div>
+                  </div>
+                  {theme === t.id && (
+                    <svg className={`w-4 h-4 ${t.checkColor}`} fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
         </>

@@ -1,5 +1,6 @@
-/* Premium Blend Font Import - must be at top */
+/* Font Imports - must be at top */
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -46,6 +47,41 @@
   --theme-text-muted: #64748b;
   --theme-border: rgba(0, 0, 0, 0.05);
   --theme-footer-bg: #1a1a1a;
+}
+
+/* Ink Diffusion Theme - Editorial Luxury */
+[data-theme="ink-diffusion"] {
+  --foreground-rgb: 44, 44, 44;
+  --background-start-rgb: 250, 247, 242;
+  --background-end-rgb: 250, 247, 242;
+
+  /* Core colors - Editorial Luxury palette */
+  --theme-bg: #FAF7F2;
+  --theme-bg-solid: #FAF7F2;
+  --theme-nav-bg: rgba(255, 255, 240, 0.95);
+  --theme-card-bg: #FFFFF0;
+  --theme-section-alt-bg: #FFFFF0;
+  --theme-accent: #722F37;
+  --theme-accent-hover: #5a252c;
+  --theme-accent-secondary: #D4AF37;
+  --theme-text-primary: #2C2C2C;
+  --theme-text-secondary: #4a4a4a;
+  --theme-text-muted: #6b6b6b;
+  --theme-border: rgba(114, 47, 55, 0.1);
+  --theme-footer-bg: #1a1a1a;
+
+  /* Extended palette */
+  --ink-burgundy: #722F37;
+  --ink-burgundy-light: #8b3d47;
+  --ink-burgundy-dark: #5a252c;
+  --ink-gold: #D4AF37;
+  --ink-gold-light: #e6c65c;
+  --ink-gold-dark: #b8962e;
+  --ink-cream: #FAF7F2;
+  --ink-ivory: #FFFFF0;
+  --ink-charcoal: #2C2C2C;
+  --ink-rose: #C77D8F;
+  --ink-sage: #8B9A7D;
 }
 
 body {
@@ -155,6 +191,230 @@ body {
   background-color: var(--theme-footer-bg) !important;
 }
 
+/* ========================================
+   INK DIFFUSION THEME STYLES
+   ======================================== */
+
+/* Ink Diffusion Typography */
+[data-theme="ink-diffusion"] body {
+  font-family: 'Inter', var(--font-sans);
+  background: var(--theme-bg);
+}
+
+[data-theme="ink-diffusion"] h1,
+[data-theme="ink-diffusion"] h2,
+[data-theme="ink-diffusion"] h3 {
+  font-family: 'Playfair Display', serif;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Ink Diffusion button styles */
+[data-theme="ink-diffusion"] .btn-primary {
+  background: var(--theme-accent);
+  box-shadow: 0 4px 14px rgba(114, 47, 55, 0.25);
+  border: none;
+}
+
+[data-theme="ink-diffusion"] .btn-primary:hover {
+  background: var(--theme-accent-hover);
+  box-shadow: 0 6px 20px rgba(114, 47, 55, 0.35);
+}
+
+[data-theme="ink-diffusion"] .btn-secondary {
+  border-color: var(--theme-border);
+  background: var(--theme-card-bg);
+}
+
+[data-theme="ink-diffusion"] .btn-secondary:hover {
+  border-color: var(--theme-accent);
+  color: var(--theme-accent);
+}
+
+/* Ink Diffusion gradient text */
+[data-theme="ink-diffusion"] .text-gradient {
+  background: linear-gradient(135deg, var(--theme-accent), var(--theme-accent-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Ink Diffusion glass effect */
+[data-theme="ink-diffusion"] .glass {
+  background: var(--theme-card-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--theme-border);
+  box-shadow: 0 10px 40px rgba(114, 47, 55, 0.08);
+}
+
+/* Ink Diffusion card hover */
+[data-theme="ink-diffusion"] .card-hover:hover {
+  border-color: var(--theme-accent);
+  box-shadow: 0 10px 40px rgba(114, 47, 55, 0.12);
+}
+
+/* Ink Diffusion nav styling */
+[data-theme="ink-diffusion"] nav.glass {
+  background: var(--theme-nav-bg);
+}
+
+/* Ink Diffusion primary color overrides */
+[data-theme="ink-diffusion"] .text-primary-500,
+[data-theme="ink-diffusion"] .text-primary-600,
+[data-theme="ink-diffusion"] .text-primary-400,
+[data-theme="ink-diffusion"] .text-primary-700 {
+  color: var(--theme-accent) !important;
+}
+
+[data-theme="ink-diffusion"] .bg-primary-500,
+[data-theme="ink-diffusion"] .bg-primary-600 {
+  background-color: var(--theme-accent) !important;
+}
+
+[data-theme="ink-diffusion"] .bg-primary-50 {
+  background-color: rgba(114, 47, 55, 0.08) !important;
+}
+
+[data-theme="ink-diffusion"] .from-primary-500 {
+  --tw-gradient-from: var(--theme-accent) !important;
+}
+
+[data-theme="ink-diffusion"] .to-accent-500,
+[data-theme="ink-diffusion"] .to-accent-600 {
+  --tw-gradient-to: var(--theme-accent-secondary) !important;
+}
+
+[data-theme="ink-diffusion"] .ring-primary-500,
+[data-theme="ink-diffusion"] .focus\:ring-primary-500:focus {
+  --tw-ring-color: var(--theme-accent) !important;
+}
+
+[data-theme="ink-diffusion"] .border-primary-500 {
+  border-color: var(--theme-accent) !important;
+}
+
+[data-theme="ink-diffusion"] .focus\:border-primary-500:focus {
+  border-color: var(--theme-accent) !important;
+}
+
+/* Ink Diffusion accent color overrides */
+[data-theme="ink-diffusion"] .bg-accent-500,
+[data-theme="ink-diffusion"] .bg-accent-600 {
+  background-color: var(--theme-accent-secondary) !important;
+}
+
+[data-theme="ink-diffusion"] .text-accent-500,
+[data-theme="ink-diffusion"] .text-accent-600 {
+  color: var(--theme-accent-secondary) !important;
+}
+
+/* Ink Diffusion footer */
+[data-theme="ink-diffusion"] footer.bg-slate-900 {
+  background-color: var(--theme-footer-bg) !important;
+}
+
+/* Ink Diffusion section backgrounds */
+[data-theme="ink-diffusion"] .bg-white {
+  background-color: var(--theme-card-bg) !important;
+}
+
+[data-theme="ink-diffusion"] .bg-slate-50 {
+  background-color: var(--theme-bg-solid) !important;
+}
+
+[data-theme="ink-diffusion"] .bg-slate-100 {
+  background-color: rgba(114, 47, 55, 0.05) !important;
+}
+
+/* Ink Diffusion hero gradient override */
+[data-theme="ink-diffusion"] .bg-gradient-to-br.from-primary-50 {
+  background: var(--theme-bg-solid) !important;
+}
+
+/* Ink Diffusion CTA section */
+[data-theme="ink-diffusion"] .bg-gradient-to-r.from-primary-600.to-accent-600 {
+  background: linear-gradient(135deg, var(--theme-accent), var(--ink-burgundy-dark)) !important;
+}
+
+/* Ink Diffusion sidebar */
+[data-theme="ink-diffusion"] .border-slate-200 {
+  border-color: rgba(114, 47, 55, 0.12) !important;
+}
+
+/* Ink Diffusion hover states */
+[data-theme="ink-diffusion"] .hover\:bg-slate-50:hover {
+  background-color: rgba(114, 47, 55, 0.05) !important;
+}
+
+[data-theme="ink-diffusion"] .hover\:bg-primary-50:hover {
+  background-color: rgba(114, 47, 55, 0.08) !important;
+}
+
+[data-theme="ink-diffusion"] .hover\:text-primary-700:hover,
+[data-theme="ink-diffusion"] .hover\:text-primary-900:hover {
+  color: var(--ink-burgundy-dark) !important;
+}
+
+/* Ink Diffusion form inputs */
+[data-theme="ink-diffusion"] input,
+[data-theme="ink-diffusion"] textarea,
+[data-theme="ink-diffusion"] select {
+  background-color: var(--theme-card-bg);
+  border-color: rgba(114, 47, 55, 0.15);
+}
+
+[data-theme="ink-diffusion"] input:focus,
+[data-theme="ink-diffusion"] textarea:focus,
+[data-theme="ink-diffusion"] select:focus {
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 3px rgba(114, 47, 55, 0.1);
+}
+
+/* Ink Diffusion status badges - enhanced styling */
+[data-theme="ink-diffusion"] .bg-green-100 {
+  background-color: rgba(139, 154, 125, 0.2) !important;
+}
+
+[data-theme="ink-diffusion"] .text-green-800 {
+  color: #5a6b4f !important;
+}
+
+[data-theme="ink-diffusion"] .bg-blue-100 {
+  background-color: rgba(114, 47, 55, 0.1) !important;
+}
+
+[data-theme="ink-diffusion"] .text-blue-800,
+[data-theme="ink-diffusion"] .text-blue-700 {
+  color: var(--theme-accent) !important;
+}
+
+[data-theme="ink-diffusion"] .bg-purple-100 {
+  background-color: rgba(212, 175, 55, 0.15) !important;
+}
+
+[data-theme="ink-diffusion"] .text-purple-800,
+[data-theme="ink-diffusion"] .text-purple-700 {
+  color: var(--ink-gold-dark) !important;
+}
+
+/* Ink Diffusion scrollbar */
+[data-theme="ink-diffusion"] ::-webkit-scrollbar-track {
+  background: var(--theme-bg-solid);
+}
+
+[data-theme="ink-diffusion"] ::-webkit-scrollbar-thumb {
+  background: rgba(114, 47, 55, 0.3);
+}
+
+[data-theme="ink-diffusion"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(114, 47, 55, 0.5);
+}
+
+/* Ink Diffusion special decorative elements */
+[data-theme="ink-diffusion"] .pricing-popular::before {
+  background: linear-gradient(135deg, var(--theme-accent-secondary), var(--theme-accent));
+}
+
 /* Premium Blend section backgrounds */
 [data-theme="premium-blend"] .bg-white,
 [data-theme="premium-blend"] section.bg-white {
@@ -235,13 +495,13 @@ html {
 
 /* Pricing card special effect */
 .pricing-popular {
-  @apply relative overflow-hidden;
+  @apply relative;
 }
 
 .pricing-popular::before {
   content: '';
-  @apply absolute -top-12 -right-12 w-24 h-24 bg-gradient-to-br from-accent-400 to-primary-500 
-         rounded-full blur-2xl opacity-50;
+  @apply absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-accent-400 to-primary-500
+         rounded-full blur-3xl opacity-30 -z-10;
 }
 
 /* Input focus states */

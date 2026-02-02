@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
-type Theme = 'original' | 'premium-blend'
+type Theme = 'original' | 'premium-blend' | 'ink-diffusion'
 
 interface ThemeContextType {
   theme: Theme
@@ -20,7 +20,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setMounted(true)
     // Load saved theme from localStorage
     const savedTheme = localStorage.getItem('scribengine-theme') as Theme | null
-    if (savedTheme && (savedTheme === 'original' || savedTheme === 'premium-blend')) {
+    if (savedTheme && (savedTheme === 'original' || savedTheme === 'premium-blend' || savedTheme === 'ink-diffusion')) {
       setTheme(savedTheme)
     }
   }, [])
