@@ -13,7 +13,7 @@ interface UIContextType {
 const UIContext = createContext<UIContextType | undefined>(undefined)
 
 export function UIProvider({ children }: { children: ReactNode }) {
-  const [uiMode, setUIMode] = useState<UIMode>('classic')
+  const [uiMode, setUIMode] = useState<UIMode>('ink-diffusion')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export function useUIMode() {
   // Return default values if used outside provider (e.g., during SSG)
   if (context === undefined) {
     return {
-      uiMode: 'classic' as UIMode,
+      uiMode: 'ink-diffusion' as UIMode,
       setUIMode: () => {},
       toggleUIMode: () => {},
     }
