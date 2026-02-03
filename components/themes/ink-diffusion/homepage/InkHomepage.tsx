@@ -12,6 +12,7 @@ import { tokens } from '../primitives/design-tokens';
 import { HeroSection } from './sections/HeroSection';
 import { ServicesSection } from './sections/ServicesSection';
 import { StyleLearningSection } from './sections/StyleLearningSection';
+import { GenerationDemoSection } from './sections/GenerationDemoSection';
 import { PricingSection } from './sections/PricingSection';
 import { BlogPricingSection } from './sections/BlogPricingSection';
 import { HowItWorksSection } from './sections/HowItWorksSection';
@@ -31,6 +32,9 @@ export const InkHomepage: React.FC = () => {
 
       {/* Style Learning - Key differentiator */}
       <StyleLearningSection />
+
+      {/* Generation Demo - Visual demonstration */}
+      <GenerationDemoSection />
 
       {/* Services */}
       <ServicesSection />

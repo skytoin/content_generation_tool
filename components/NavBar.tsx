@@ -23,7 +23,13 @@ export function NavBar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center space-x-2">
-            {theme === 'premium-blend' ? (
+            {theme === 'ink-diffusion' ? (
+              // Ink Diffusion Logo - elegant serif style
+              <span className="text-xl" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+                <span className="font-light" style={{ color: '#722F37' }}>Scrib</span>
+                <span className="italic font-light" style={{ color: '#2C3E50' }}>engine</span>
+              </span>
+            ) : theme === 'premium-blend' ? (
               // Premium Blend Logo
               <span className="text-xl">
                 <span className="font-fraunces italic font-medium" style={{ color: '#c75d3a', fontFamily: 'Fraunces, serif' }}>Scrib</span>
@@ -126,9 +132,16 @@ export function NavBar() {
               <a href="/#how-it-works" className="block px-4 py-2 text-slate-600 hover:text-primary-600">How It Works</a>
               <a href="/#faq" className="block px-4 py-2 text-slate-600 hover:text-primary-600">FAQ</a>
 
+              {/* Theme Switcher for mobile */}
+              <div className="px-4 py-2 border-t border-slate-100 mt-2 pt-4">
+                <p className="text-xs text-slate-500 mb-2">Theme</p>
+                <ThemeSwitcher />
+              </div>
+
               {session ? (
                 <>
                   <Link href="/dashboard" className="block px-4 py-2 text-primary-600 font-medium">Dashboard</Link>
+                  <Link href="/dashboard/settings" className="block px-4 py-2 text-slate-600">Settings</Link>
                   <button
                     onClick={() => signOut({ callbackUrl: '/' })}
                     className="block w-full text-left px-4 py-2 text-red-600"
