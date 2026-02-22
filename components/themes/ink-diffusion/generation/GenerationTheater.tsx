@@ -14,6 +14,9 @@ import { InkDrop } from './InkDrop';
 import { StageIndicator } from './StageIndicator';
 import { WritingSurface } from './WritingSurface';
 import { InstagramSurface } from './InstagramSurface';
+import { XSurface } from './XSurface';
+import { LinkedInSurface } from './LinkedInSurface';
+import { ContentArchitectSurface } from './ContentArchitectSurface';
 import { ProgressVisualization } from './ProgressVisualization';
 
 export interface Stage {
@@ -28,7 +31,7 @@ interface GenerationTheaterProps {
   isGenerating: boolean;
   progress: number;
   title?: string;
-  contentType?: 'blog' | 'instagram' | 'email' | 'social';
+  contentType?: 'blog' | 'instagram' | 'twitter' | 'linkedin' | 'email' | 'social' | 'content-architect';
   onCancel?: () => void;
   error?: string | null;
 }
@@ -44,8 +47,20 @@ export const GenerationTheater: React.FC<GenerationTheaterProps> = ({
   onCancel,
   error,
 }) => {
-  // Auto-detect Instagram content from text if contentType not explicitly set
-  const isInstagramContent = contentType === 'instagram' || streamedText.includes('📸 INSTAGRAM CONTENT');
+  // Auto-detect content type from text if not explicitly set
+  const isContentArchitect = contentType === 'content-architect' ||
+    streamedText.includes('🏗️ CONTENT ARCHITECT') ||
+    streamedText.includes('CONTENT ARCHITECT');
+  const isInstagramContent = !isContentArchitect && (contentType === 'instagram' || streamedText.includes('📸 INSTAGRAM CONTENT'));
+  const isXContent = !isContentArchitect && (contentType === 'twitter' ||
+    streamedText.includes('🐦 X TWEET PACK') ||
+    streamedText.includes('🧵 X THREAD') ||
+    streamedText.includes('💬 X QUOTE TWEETS'));
+  const isLinkedInContent = !isContentArchitect && (contentType === 'linkedin' ||
+    streamedText.includes('💼 LINKEDIN TEXT POSTS') ||
+    streamedText.includes('🎠 LINKEDIN CAROUSEL') ||
+    streamedText.includes('📰 LINKEDIN ARTICLE') ||
+    streamedText.includes('📊 LINKEDIN POLLS'));
   // Generate random ink drops for background animation
   const inkDrops = useMemo(() =>
     Array.from({ length: 6 }, (_, i) => ({
@@ -181,8 +196,26 @@ export const GenerationTheater: React.FC<GenerationTheaterProps> = ({
 
           {/* Content surface - switches based on content type */}
           <main className="lg:col-span-9 order-1 lg:order-2">
-            {isInstagramContent ? (
+            {isContentArchitect ? (
+              <ContentArchitectSurface
+                text={streamedText}
+                isGenerating={isGenerating}
+                title={title}
+              />
+            ) : isInstagramContent ? (
               <InstagramSurface
+                text={streamedText}
+                isGenerating={isGenerating}
+                title={title}
+              />
+            ) : isXContent ? (
+              <XSurface
+                text={streamedText}
+                isGenerating={isGenerating}
+                title={title}
+              />
+            ) : isLinkedInContent ? (
+              <LinkedInSurface
                 text={streamedText}
                 isGenerating={isGenerating}
                 title={title}

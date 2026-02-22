@@ -29,6 +29,7 @@ import {
   analyzeCompetitorAds,
   type AdLibraryAnalysis,
 } from './facebook-ad-library'
+import { analyzeSEO, type SEOAnalysisRequest } from '@/lib/dataforseo/seo-analyzer'
 
 // Import RiteTag client if available
 let ritetagClient: typeof import('../analytics/ritetag-wrapper') | null = null
@@ -46,6 +47,10 @@ export interface AnalyticsRequest {
   targetPlatform?: 'instagram' | 'blog' | 'twitter' | 'facebook' | 'ads'
   contentType?: string
   userTier: 'budget' | 'standard' | 'premium'
+  industry?: string
+  companyName?: string
+  userKeywords?: string[]
+  goals?: string
 }
 
 export interface AnalyticsResponse {
@@ -185,6 +190,37 @@ export async function runAnalytics(
     )
   }
 
+  // DataForSEO - keyword research and competitor analysis (standard/premium only)
+  if (
+    availableTools.includes('dataforseo') &&
+    ['standard', 'premium'].includes(request.userTier)
+  ) {
+    tasks.push(
+      (async () => {
+        try {
+          const seoRequest: SEOAnalysisRequest = {
+            description: request.topic,
+            industry: request.industry,
+            goals: request.goals,
+            competitorUrls: request.competitorUrls,
+            userKeywords: request.userKeywords || request.keywords,
+            companyName: request.companyName,
+          }
+          const seoResult = await analyzeSEO(seoRequest)
+          if (seoResult.dataSource === 'dataforseo') {
+            result.seoAnalysis = seoResult
+            toolsUsed.push('dataforseo')
+          } else {
+            toolsUnavailable.push('dataforseo')
+          }
+        } catch (error) {
+          toolsUnavailable.push('dataforseo')
+          warnings.push(`DataForSEO error: ${error}`)
+        }
+      })()
+    )
+  }
+
   // Wait for all tasks to complete
   await Promise.allSettled(tasks)
 
@@ -285,6 +321,32 @@ function generateAnalyticsSummary(
       }
     } else {
       parts.push(`📢 No active competitor ads found for this search.`)
+    }
+  }
+
+  // SEO Analysis
+  if (analytics.seoAnalysis) {
+    const seo = analytics.seoAnalysis
+    if (seo.suggestedKeywords.length > 0) {
+      const topKw = seo.suggestedKeywords.slice(0, 3).map(k => k.keyword)
+      parts.push(
+        `🔍 SEO: ${seo.suggestedKeywords.length} keyword opportunities found. Top: ${topKw.join(', ')}`
+      )
+    }
+    if (seo.discoveredCompetitors.length > 0) {
+      parts.push(
+        `🏢 ${seo.discoveredCompetitors.length} competitors analyzed`
+      )
+    }
+    if (seo.contentGaps.length > 0) {
+      parts.push(
+        `📊 ${seo.contentGaps.length} content gaps identified`
+      )
+    }
+    if (seo.flaggedKeywords.length > 0) {
+      parts.push(
+        `⚠️ ${seo.flaggedKeywords.length} keyword(s) flagged for low click-through`
+      )
     }
   }
 

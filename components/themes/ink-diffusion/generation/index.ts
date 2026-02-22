@@ -11,3 +11,5 @@ export { StageIndicator } from './StageIndicator';
 export { WritingSurface } from './WritingSurface';
 export { InstagramSurface } from './InstagramSurface';
 export { ProgressVisualization } from './ProgressVisualization';
+export { LinkedInSurface } from './LinkedInSurface';
+export { ContentArchitectSurface } from './ContentArchitectSurface';

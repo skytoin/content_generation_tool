@@ -65,6 +65,10 @@ export {
   analyzeCompetitorAds,
 } from './facebook-ad-library'
 
+// DataForSEO / SEO Analyzer
+export { analyzeSEO } from '@/lib/dataforseo/seo-analyzer'
+export type { SEOAnalysisRequest } from '@/lib/dataforseo/seo-analyzer'
+
 /**
  * Quick health check for all configured tools
  */
@@ -119,6 +123,14 @@ export async function checkAllToolsHealth(): Promise<{
     else unhealthy.push('facebook-ad-library')
   } else {
     unconfigured.push('facebook-ad-library')
+  }
+
+  // Check DataForSEO
+  if (configuredTools.includes('dataforseo' as any)) {
+    // DataForSEO just needs env vars, no live health check needed
+    healthy.push('dataforseo')
+  } else {
+    unconfigured.push('dataforseo')
   }
 
   // Mark other tools as unconfigured

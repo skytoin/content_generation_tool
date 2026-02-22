@@ -35,10 +35,11 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  accounts Account[]
-  sessions Session[]
-  projects Project[]
-  payments Payment[]
+  accounts        Account[]
+  sessions        Session[]
+  projects        Project[]
+  payments        Payment[]
+  companyProfiles CompanyProfile[]
 
   @@map("users")
 }
@@ -87,6 +88,55 @@ model VerificationToken {
 // APPLICATION TABLES
 // ============================================
 
+model CompanyProfile {
+  id        String   @id @default(cuid())
+  userId    String
+
+  // Identity
+  name            String   // Display name, e.g. "My SaaS Startup"
+  isDefault       Boolean  @default(false)
+  companyName     String
+  industry        String?
+  companyDescription String? @db.Text
+  companySize     String?  // startup, small, medium, large, enterprise
+  websiteUrl      String?
+
+  // Brand Voice
+  brandVoice       String?  @db.Text // Description of writing tone/style
+  brandGuidelines  String?  @db.Text // Full brand guide text
+  sampleContent    String?  @db.Text // Past posts/articles for voice cloning
+  brandColors      Json?    // Array of hex color strings
+  emojiPreference  String?  // none, minimal, moderate, heavy
+  controversyLevel String?  // safe, mild_opinion, clear_position, spicy
+
+  // Audience
+  primaryAudience      String?  @db.Text
+  secondaryAudiences   String?  @db.Text
+  audiencePainPoints   String?  @db.Text
+  audienceAspirations  String?  @db.Text
+
+  // Goals & Messaging
+  primaryGoals        String?  @db.Text
+  keyMessages         String?  @db.Text
+  uniqueSellingPoints String?  @db.Text
+
+  // Content Rules
+  mustIncludeKeywords String?  @db.Text
+  mustAvoidKeywords   String?  @db.Text
+  competitorUrls      String?  @db.Text
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projects Project[]
+
+  @@index([userId])
+  @@map("company_profiles")
+}
+
 model Project {
   id        String   @id @default(cuid())
   userId    String
@@ -106,6 +156,7 @@ model Project {
   // Generated content
   result        String? @db.Text // The actual generated content
   qualityReport String? @db.Text // The quality assurance report
+  structuredData Json?   // Structured pipeline output (ContentArchitectResponse JSON)
 
   // Metadata
   wordCount   Int?
@@ -116,8 +167,12 @@ model Project {
   updatedAt   DateTime  @updatedAt
   completedAt DateTime?
 
+  // Company profile used for this project
+  companyProfileId String?
+
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyProfile CompanyProfile? @relation(fields: [companyProfileId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([status])

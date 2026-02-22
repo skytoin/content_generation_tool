@@ -280,6 +280,9 @@ const CAPTION_WRITER_SYSTEM_CLAUDE = `You are an elite Instagram copywriter know
 - Write generic inspirational fluff
 - Stuff hashtags into the caption body
 - Sound like ChatGPT
+- Use AI vocabulary tells: delve, tapestry, realm, leverage, utilize, harness, unlock, unleash, embark, foster, facilitate, streamline, orchestrate, showcase, elucidate, optimize, elevate, revolutionize, paradigm, synergy, holistic, robust, seamless, cutting-edge, groundbreaking, transformative, unprecedented, pivotal, plethora, myriad (EXCEPTIONS: 1. genuine industry terms in their technical context; 2. words the customer explicitly requested as SEO keywords, brand terms, or must-include vocabulary — customer preference always overrides)
+- Skip contractions — humans always contract (it's, don't, can't, you're)
+- Use "utilize" instead of "use", "facilitate" instead of "help", "embark" instead of "start" — always pick the simpler word
 
 ## OUTPUT
 Return ONLY the caption text with proper line breaks. No JSON wrapper.
@@ -479,6 +482,7 @@ export interface InstagramFormData {
   industry: string
   topic: string
   audience: string
+  goals?: string
   goal?: string
   contentType?: 'single_post' | 'carousel' | 'reels_cover' | 'story'
   postCount?: number
@@ -605,6 +609,7 @@ Industry: ${formData.industry}
 Topic: ${formData.topic}
 Audience: ${formData.audience}
 Goal: ${formData.goal || 'engagement'}
+${formData.goals ? `Goals: ${formData.goals}` : ''}
 
 Research Instagram trends and strategy for this content.`
 
@@ -626,6 +631,7 @@ Research Instagram trends and strategy for this content.`
 Topic: ${formData.topic}
 Audience: ${formData.audience}
 Industry: ${formData.industry}
+${formData.goals ? `Goals: ${formData.goals}` : ''}
 Format: ${formData.contentType || 'carousel'}
 Number of Slides: ${numberOfSlides}
 Brand Voice: ${processedInput.brand?.voice || 'professional'}
@@ -655,6 +661,7 @@ Company: ${formData.company}
 Industry: ${formData.industry}
 Audience: ${formData.audience}
 Goal: ${formData.goal || 'engagement'}
+${formData.goals ? `Goals: ${formData.goals}` : ''}
 Brand Voice: ${styleProfile.caption_tone}
 Emoji Usage: ${styleProfile.emoji_usage}
 CTA Style: ${styleProfile.cta_style}
@@ -735,6 +742,7 @@ Caption: ${captionDraft}
 Topic: ${formData.topic}
 Industry: ${formData.industry}
 Goal: ${formData.goal || 'engagement'}
+${formData.goals ? `Goals: ${formData.goals}` : ''}
 
 Select 10-15 optimal hashtags. Mix sizes (2 large 500K+, 5 medium 50K-500K, 5 niche <50K).
 
@@ -859,6 +867,7 @@ Visual Prompts: ${JSON.stringify(visualData.imagePrompts?.slice(0, 3), null, 2)}
 Topic: ${formData.topic}
 Audience: ${formData.audience}
 Goal: ${formData.goal || 'engagement'}
+${formData.goals ? `Goals: ${formData.goals}` : ''}
 
 Review this content.`
 
@@ -1013,7 +1022,7 @@ export async function runPremiumInstagramPipeline(
   const researchResult = await callOpenAI(
     OPENAI_MODELS.GPT_4_1,
     RESEARCH_STRATEGY_SYSTEM,
-    `Industry: ${formData.industry}\nTopic: ${formData.topic}\nAudience: ${formData.audience}\nGoal: ${formData.goal}\n${trendingData ? `Trending: ${trendingData.map((t: any) => t.hashtag).join(', ')}` : ''}`,
+    `Industry: ${formData.industry}\nTopic: ${formData.topic}\nAudience: ${formData.audience}\nGoal: ${formData.goal}\n${formData.goals ? `Goals: ${formData.goals}\n` : ''}${trendingData ? `Trending: ${trendingData.map((t: any) => t.hashtag).join(', ')}` : ''}`,
     2000
   )
   let researchData: any
@@ -1030,7 +1039,7 @@ export async function runPremiumInstagramPipeline(
 
   const architectResult = await callClaude(
     CONTENT_ARCHITECT_SYSTEM_CLAUDE,
-    `Topic: ${formData.topic}\nAudience: ${formData.audience}\nFormat: ${formData.contentType}\nSlides: ${numberOfSlides}\nVoice: ${styleProfile.caption_tone}\nResearch: ${JSON.stringify(researchData)}`,
+    `Topic: ${formData.topic}\nAudience: ${formData.audience}\n${formData.goals ? `Goals: ${formData.goals}\n` : ''}Format: ${formData.contentType}\nSlides: ${numberOfSlides}\nVoice: ${styleProfile.caption_tone}\nResearch: ${JSON.stringify(researchData)}`,
     3000
   )
   let architecture: any
@@ -1047,7 +1056,7 @@ export async function runPremiumInstagramPipeline(
 
   const hookResult = await callClaude(
     HOOK_SPECIALIST_SYSTEM,
-    `Topic: ${formData.topic}\nAudience: ${formData.audience}\nIndustry: ${formData.industry}\nGoal: ${formData.goal}\nContent Type: ${formData.contentType}\n\nArchitecture:\n${JSON.stringify(architecture, null, 2)}`,
+    `Topic: ${formData.topic}\nAudience: ${formData.audience}\nIndustry: ${formData.industry}\nGoal: ${formData.goal}\n${formData.goals ? `Goals: ${formData.goals}\n` : ''}Content Type: ${formData.contentType}\n\nArchitecture:\n${JSON.stringify(architecture, null, 2)}`,
     3000
   )
   let hookData: any
@@ -1070,6 +1079,7 @@ Topic: ${formData.topic}
 Company: ${formData.company}
 Audience: ${formData.audience}
 Goal: ${formData.goal}
+${formData.goals ? `Goals: ${formData.goals}` : ''}
 Voice: ${styleProfile.caption_tone}
 Emoji: ${styleProfile.emoji_usage}
 
@@ -1147,7 +1157,7 @@ ${JSON.stringify(architecture.captionDirection, null, 2)}`
     const hashtagResult = await callOpenAI(
       OPENAI_MODELS.GPT_4O_MINI,
       HASHTAG_STRATEGIST_SYSTEM,
-      `Caption: ${captionDraft}\nTopic: ${formData.topic}\nIndustry: ${formData.industry}\nGoal: ${formData.goal}\n\nSelect 15-18 optimal hashtags.`,
+      `Caption: ${captionDraft}\nTopic: ${formData.topic}\nIndustry: ${formData.industry}\nGoal: ${formData.goal}\n${formData.goals ? `Goals: ${formData.goals}\n` : ''}\nSelect 15-18 optimal hashtags.`,
       1500
     )
     try {
@@ -1164,6 +1174,7 @@ ${JSON.stringify(architecture.captionDirection, null, 2)}`
 Company: ${formData.company}
 Industry: ${formData.industry}
 Topic: ${formData.topic}
+${formData.goals ? `Goals: ${formData.goals}` : ''}
 Mood: ${imageOptions.mood || 'professional'}
 Style: ${imageOptions.style || 'minimalist'}
 Number of Slides: ${numberOfSlides}

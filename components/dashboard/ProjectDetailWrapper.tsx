@@ -22,15 +22,18 @@ interface Project {
   lengthTier?: string
   createdAt: Date
   completedAt: Date | null
+  structuredData?: any
 }
 
 interface ProjectDetailWrapperProps {
   project: Project
   instagramImages: { slideNumber: number; url: string }[]
   isInstagram: boolean
+  isTwitter: boolean
+  isLinkedIn: boolean
 }
 
-export function ProjectDetailWrapper({ project, instagramImages, isInstagram }: ProjectDetailWrapperProps) {
+export function ProjectDetailWrapper({ project, instagramImages, isInstagram, isTwitter, isLinkedIn }: ProjectDetailWrapperProps) {
   const { uiMode } = useUIMode()
 
   const getServiceIcon = (serviceType: string) => {
@@ -38,6 +41,7 @@ export function ProjectDetailWrapper({ project, instagramImages, isInstagram }: 
       case 'blog-post': return '📝'
       case 'social-media': return '📱'
       case 'instagram': return '📸'
+      case 'twitter': return '🐦'
       case 'email-sequence': return '📧'
       case 'seo-report': return '📊'
       default: return '📄'
@@ -85,6 +89,8 @@ export function ProjectDetailWrapper({ project, instagramImages, isInstagram }: 
         project={project}
         instagramImages={instagramImages}
         isInstagram={isInstagram}
+        isTwitter={isTwitter}
+        isLinkedIn={isLinkedIn}
       />
     )
   }

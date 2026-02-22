@@ -73,6 +73,7 @@ export async function PATCH(
       wordCount,
       costCents,
       completedAt,
+      structuredData,
     } = body
 
     const project = await prisma.project.update({
@@ -90,6 +91,7 @@ export async function PATCH(
         ...(wordCount !== undefined && { wordCount }),
         ...(costCents !== undefined && { costCents }),
         ...(completedAt !== undefined && { completedAt: new Date(completedAt) }),
+        ...(structuredData !== undefined && { structuredData }),
       },
     })
 

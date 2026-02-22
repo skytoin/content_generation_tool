@@ -1,6 +1,7 @@
 export { InkDashboardHome } from './InkDashboardHome'
 export { InkProjectsList } from './InkProjectsList'
 export { InkSettings } from './InkSettings'
+export { InkProfiles } from './InkProfiles'
 export { InkBilling } from './InkBilling'
 export { InkNewProject } from './InkNewProject'
 export { InkProjectDetail } from './InkProjectDetail'

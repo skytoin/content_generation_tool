@@ -26,6 +26,25 @@ function isInstagramProject(serviceType: string, result: string | null): boolean
     result.includes('INSTAGRAM CONTENT')
 }
 
+// Helper to check if project is X/Twitter type
+function isTwitterProject(serviceType: string, result: string | null): boolean {
+  return (serviceType === 'twitter' || serviceType === 'social-media') &&
+    result !== null &&
+    (result.includes('🐦 X TWEET PACK') ||
+     result.includes('🧵 X THREAD') ||
+     result.includes('💬 X QUOTE TWEETS'))
+}
+
+// Helper to check if project is LinkedIn type
+function isLinkedInProject(serviceType: string, result: string | null): boolean {
+  return (serviceType.startsWith('linkedin') || serviceType === 'social-media') &&
+    result !== null &&
+    (result.includes('💼 LINKEDIN TEXT POSTS') ||
+     result.includes('🎠 LINKEDIN CAROUSEL') ||
+     result.includes('📰 LINKEDIN ARTICLE') ||
+     result.includes('📊 LINKEDIN POLLS'))
+}
+
 interface ProjectPageProps {
   params: Promise<{ id: string }>
 }
@@ -49,6 +68,12 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const isInstagram = isInstagramProject(project.serviceType, project.result)
   const instagramImages = isInstagram && project.result ? extractInstagramImages(project.result) : []
 
+  // Check for X/Twitter project
+  const isTwitter = isTwitterProject(project.serviceType, project.result)
+
+  // Check for LinkedIn project
+  const isLinkedIn = isLinkedInProject(project.serviceType, project.result)
+
   // Transform project for wrapper
   const projectData = {
     id: project.id,
@@ -65,6 +90,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     lengthTier: (project as any).lengthTier,
     createdAt: project.createdAt,
     completedAt: project.completedAt,
+    structuredData: project.structuredData,
   }
 
   return (
@@ -72,6 +98,8 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       project={projectData}
       instagramImages={instagramImages}
       isInstagram={isInstagram}
+      isTwitter={isTwitter}
+      isLinkedIn={isLinkedIn}
     />
   )
 }

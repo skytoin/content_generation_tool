@@ -228,7 +228,7 @@ export function RegenerateButton({
         const versionSeparator = `\n\n${'═'.repeat(55)}\n📋 VERSION ${versionCount + 1} - Generated on ${new Date().toLocaleString()}\n${'═'.repeat(55)}\n\n`
         const combinedResult = existingResult + versionSeparator + newContent
 
-        // Update project with combined result
+        // Update project with combined result and persist edited settings
         await fetch(`/api/projects/${projectId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -236,6 +236,296 @@ export function RegenerateButton({
             status: 'completed',
             result: combinedResult,
             completedAt: new Date().toISOString(),
+            formData,
+            styleSelections,
+            additionalInfo,
+          }),
+        })
+      } else if (serviceType.startsWith('x-')) {
+        // X/Twitter-specific API routes
+        const xContentType = serviceType.replace('x-', '') // tweets, thread, quote-tweets
+        const xApiEndpoint = xContentType === 'tweets'
+          ? '/api/generate/x/tweets'
+          : xContentType === 'thread'
+          ? '/api/generate/x/threads'
+          : '/api/generate/x/quote-tweets'
+
+        const generateRes = await fetch(xApiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tier,
+            formData,
+            styleSelections,
+            additionalInfo,
+          }),
+        })
+
+        result = await generateRes.json()
+
+        if (result.error) {
+          throw new Error(result.error)
+        }
+
+        // Format X result based on content type
+        let newContent = ''
+        if (xContentType === 'tweets') {
+          const tweets = result.tweets || []
+          newContent = `🐦 X TWEET PACK\n\n`
+          tweets.forEach((tweet: any, i: number) => {
+            newContent += `--- Tweet ${i + 1} ---\n`
+            newContent += `${tweet.text}\n`
+            newContent += `[${tweet.characterCount} chars | ${tweet.contentType}]\n\n`
+          })
+          if (result.qualityReport) {
+            newContent += `\n📊 QUALITY REPORT\n`
+            newContent += `Score: ${result.qualityReport.overallScore}/10\n`
+            newContent += `Shadowban Risk: ${result.qualityReport.shadowbanRisk}\n`
+          }
+        } else if (xContentType === 'thread') {
+          const thread = result.thread || []
+          newContent = `🧵 X THREAD\n\n`
+          thread.forEach((tweet: any) => {
+            newContent += `--- ${tweet.position}/${thread.length} ---\n`
+            newContent += `${tweet.text}\n`
+            newContent += `[${tweet.characterCount} chars | ${tweet.purpose}]\n\n`
+          })
+          if (result.hookVariations?.length > 0) {
+            newContent += `\n🎣 HOOK VARIATIONS\n`
+            result.hookVariations.forEach((hook: string, i: number) => {
+              newContent += `${i + 1}. ${hook}\n`
+            })
+          }
+          if (result.qualityReport) {
+            newContent += `\n📊 QUALITY REPORT\n`
+            newContent += `Overall: ${result.qualityReport.overallScore}/10\n`
+            newContent += `Hook: ${result.qualityReport.hookScore}/10\n`
+            newContent += `Flow: ${result.qualityReport.flowScore}/10\n`
+          }
+        } else {
+          // Quote tweets
+          const quotes = result.quoteTweets || []
+          newContent = `💬 X QUOTE TWEETS\n\n`
+          quotes.forEach((qt: any, i: number) => {
+            newContent += `--- Quote ${i + 1} ---\n`
+            newContent += `Target: ${qt.targetContext}\n`
+            newContent += `Response: ${qt.responseText}\n`
+            newContent += `[${qt.characterCount} chars | ${qt.quoteType}]\n\n`
+          })
+          if (result.qualityReport) {
+            newContent += `\n📊 QUALITY REPORT\n`
+            newContent += `Overall: ${result.qualityReport.overallScore}/10\n`
+            newContent += `Authenticity: ${result.qualityReport.authenticityScore}/10\n`
+            newContent += `Value Add: ${result.qualityReport.valueAddScore}/10\n`
+          }
+        }
+
+        const versionSeparator = `\n\n${'═'.repeat(55)}\n📋 VERSION ${versionCount + 1} - Generated on ${new Date().toLocaleString()}\n${'═'.repeat(55)}\n\n`
+        const combinedResult = existingResult + versionSeparator + newContent
+
+        await fetch(`/api/projects/${projectId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            result: combinedResult,
+            completedAt: new Date().toISOString(),
+            formData,
+            styleSelections,
+            additionalInfo,
+          }),
+        })
+      } else if (serviceType.startsWith('linkedin-')) {
+        // LinkedIn-specific API routes
+        const linkedinContentType = serviceType.replace('linkedin-', '') // text-posts, carousel, article, polls
+        const linkedinApiEndpoint = linkedinContentType === 'text-posts'
+          ? '/api/generate/linkedin/text-posts'
+          : linkedinContentType === 'carousel'
+          ? '/api/generate/linkedin/carousels'
+          : linkedinContentType === 'article'
+          ? '/api/generate/linkedin/articles'
+          : '/api/generate/linkedin/polls'
+
+        const generateRes = await fetch(linkedinApiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tier,
+            formData,
+            styleSelections,
+            additionalInfo,
+          }),
+        })
+
+        result = await generateRes.json()
+
+        if (result.error) {
+          throw new Error(result.error)
+        }
+
+        // Format LinkedIn result based on content type
+        let newContent = ''
+        if (linkedinContentType === 'text-posts') {
+          const posts = result.posts || []
+          newContent = `💼 LINKEDIN TEXT POSTS\n\n`
+          posts.forEach((post: any, i: number) => {
+            newContent += `--- Post ${i + 1} ---\n`
+            newContent += `${post.text}\n`
+            newContent += `[${post.characterCount} chars | ${post.contentType}]\n`
+            if (post.hashtags?.length > 0) {
+              newContent += `Hashtags: ${post.hashtags.join(' ')}\n`
+            }
+            if (post.firstComment) {
+              newContent += `First Comment: ${post.firstComment}\n`
+            }
+            newContent += `\n`
+          })
+          if (result.qualityReport) {
+            newContent += `\n📊 QUALITY REPORT\n`
+            newContent += `Score: ${result.qualityReport.overallScore}/10\n`
+            newContent += `Algorithm: ${result.qualityReport.algorithmScore}/10\n`
+          }
+        } else if (linkedinContentType === 'carousel') {
+          const carousels = result.carousels || []
+          newContent = `🎠 LINKEDIN CAROUSEL\n\n`
+          carousels.forEach((carousel: any, i: number) => {
+            newContent += `--- Carousel ${i + 1} ---\n`
+            newContent += `Caption: ${carousel.caption}\n`
+            newContent += `[${carousel.captionCharacterCount} chars]\n`
+            if (carousel.slides?.length > 0) {
+              carousel.slides.forEach((slide: any) => {
+                newContent += `  Slide ${slide.slideNumber}: ${slide.headline}\n`
+                newContent += `    ${slide.body}\n`
+                if (slide.visualDirection) {
+                  newContent += `    Visual: ${slide.visualDirection}\n`
+                }
+              })
+            }
+            if (carousel.hashtags?.length > 0) {
+              newContent += `Hashtags: ${carousel.hashtags.join(' ')}\n`
+            }
+            if (carousel.firstComment) {
+              newContent += `First Comment: ${carousel.firstComment}\n`
+            }
+            newContent += `\n`
+          })
+          if (result.qualityReport) {
+            newContent += `\n📊 QUALITY REPORT\n`
+            newContent += `Score: ${result.qualityReport.overallScore}/10\n`
+            newContent += `Algorithm: ${result.qualityReport.algorithmScore}/10\n`
+          }
+        } else if (linkedinContentType === 'article') {
+          const articles = result.articles || []
+          newContent = `📰 LINKEDIN ARTICLE\n\n`
+          articles.forEach((article: any, i: number) => {
+            newContent += `--- Article ${i + 1} ---\n`
+            newContent += `Title: ${article.title}\n`
+            newContent += `Subtitle: ${article.subtitle}\n`
+            newContent += `[${article.wordCount} words]\n\n`
+            newContent += `${article.body}\n\n`
+            if (article.companionPost) {
+              newContent += `Companion Post: ${article.companionPost}\n`
+            }
+            if (article.companionPostFirstComment) {
+              newContent += `First Comment: ${article.companionPostFirstComment}\n`
+            }
+            if (article.seoKeywords?.length > 0) {
+              newContent += `SEO Keywords: ${article.seoKeywords.join(', ')}\n`
+            }
+            newContent += `\n`
+          })
+          if (result.qualityReport) {
+            newContent += `\n📊 QUALITY REPORT\n`
+            newContent += `Score: ${result.qualityReport.overallScore}/10\n`
+            newContent += `Depth: ${result.qualityReport.depthScore}/10\n`
+          }
+        } else {
+          // Polls
+          const polls = result.polls || []
+          newContent = `📊 LINKEDIN POLLS\n\n`
+          polls.forEach((poll: any, i: number) => {
+            newContent += `--- Poll ${i + 1} ---\n`
+            newContent += `Question: ${poll.question}\n`
+            newContent += `[${poll.questionCharacterCount} chars]\n`
+            if (poll.options?.length > 0) {
+              poll.options.forEach((opt: string, j: number) => {
+                newContent += `  Option ${j + 1}: ${opt}\n`
+              })
+            }
+            if (poll.companionText) {
+              newContent += `Companion Text: ${poll.companionText}\n`
+            }
+            if (poll.firstComment) {
+              newContent += `First Comment: ${poll.firstComment}\n`
+            }
+            newContent += `[${poll.pollType}]\n\n`
+          })
+          if (result.qualityReport) {
+            newContent += `\n📊 QUALITY REPORT\n`
+            newContent += `Score: ${result.qualityReport.overallScore}/10\n`
+            newContent += `Engagement: ${result.qualityReport.engagementPrediction}/10\n`
+          }
+        }
+
+        const versionSeparator = `\n\n${'═'.repeat(55)}\n📋 VERSION ${versionCount + 1} - Generated on ${new Date().toLocaleString()}\n${'═'.repeat(55)}\n\n`
+        const combinedResult = existingResult + versionSeparator + newContent
+
+        await fetch(`/api/projects/${projectId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            result: combinedResult,
+            completedAt: new Date().toISOString(),
+            formData,
+            styleSelections,
+            additionalInfo,
+          }),
+        })
+      } else if (serviceType === 'content-architect') {
+        // Content Architect API
+        const generateRes = await fetch('/api/generate/content-architect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            description: formData?.description || '',
+            tier,
+            businessInfo: {
+              industry: formData?.industry || '',
+              companyName: formData?.companyName || '',
+            },
+            goals: formData?.goals || [],
+            platforms: formData?.platforms || [],
+            includeImages: formData?.includeImages ?? true,
+            competitorUrls: typeof formData?.competitorUrls === 'string'
+              ? formData.competitorUrls.split('\n').map((url: string) => url.trim()).filter((url: string) => url)
+              : formData?.competitorUrls || [],
+            additionalContext: formData?.additionalContext || '',
+          }),
+        })
+
+        result = await generateRes.json()
+
+        if (result.error) {
+          throw new Error(result.error)
+        }
+
+        const newContent = result.formattedOutput || ''
+
+        // Content Architect: replace result entirely (not append) because
+        // the UI parses sections by emoji headers and .match() always returns
+        // the first occurrence, so appended versions would never be displayed.
+        await fetch(`/api/projects/${projectId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            result: newContent,
+            completedAt: new Date().toISOString(),
+            formData,
+            styleSelections,
+            additionalInfo,
+            ...(result.data && { structuredData: result.data }),
           }),
         })
       } else {
@@ -268,7 +558,7 @@ export function RegenerateButton({
         const versionSeparator = `\n\n${'═'.repeat(55)}\n📋 VERSION ${versionCount + 1} - Generated on ${new Date().toLocaleString()}\n${'═'.repeat(55)}\n\n`
         const combinedResult = existingResult + versionSeparator + newContent
 
-        // Update project with combined result
+        // Update project with combined result and persist edited settings
         await fetch(`/api/projects/${projectId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -276,6 +566,9 @@ export function RegenerateButton({
             status: 'completed',
             result: combinedResult,
             completedAt: new Date().toISOString(),
+            formData,
+            styleSelections,
+            additionalInfo,
           }),
         })
       }

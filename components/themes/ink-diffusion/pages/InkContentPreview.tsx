@@ -6,6 +6,7 @@
  * Shows generated content in realistic preview frames:
  * - Blog: Medium-style reader view with browser chrome
  * - Instagram: iPhone frame with Instagram UI chrome
+ * - X/Twitter: iPhone frame with X UI chrome
  *
  * COPIED EXACTLY FROM DEMO for visual consistency.
  */
@@ -46,6 +47,34 @@ That's the difference between forgettable and unforgettable.
 #ContentMarketing #BrandStrategy #ContentCreation #Marketing`,
   hashtags: ['ContentMarketing', 'BrandStrategy', 'ContentCreation', 'Marketing', 'Branding'],
   likes: '1,247',
+};
+
+const sampleXContent = {
+  username: 'yourbrand',
+  displayName: 'Your Brand',
+  tweets: [
+    {
+      text: `The best marketers aren't the loudest—they're the most memorable.
+
+Strategic patience beats tactical noise every time.`,
+      likes: '847',
+      retweets: '124',
+    },
+    {
+      text: `Hot take: Your content strategy probably has too many tactics and not enough strategy.
+
+The fix? Fewer posts, more purpose.`,
+      likes: '1.2K',
+      retweets: '256',
+    },
+    {
+      text: `The content that "failed" today might be your biggest asset in 6 months.
+
+Evergreen thinking > viral chasing`,
+      likes: '623',
+      retweets: '98',
+    },
+  ],
 };
 
 // Medium-style blog preview
@@ -129,6 +158,131 @@ const BlogPreview = () => (
     </div>
   </div>
 );
+
+// X Logo
+const XLogo = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
+// X/Twitter phone preview
+const XPhonePreview = () => {
+  const [currentTweet, setCurrentTweet] = useState(0);
+  const tweet = sampleXContent.tweets[currentTweet];
+
+  return (
+    <div className="flex justify-center">
+      {/* Phone frame */}
+      <div
+        className="relative rounded-[3rem] p-3"
+        style={{
+          background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
+        }}
+      >
+        {/* Screen */}
+        <div
+          className="relative w-[320px] rounded-[2.5rem] overflow-hidden"
+          style={{ background: '#fff' }}
+        >
+          {/* Notch */}
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-full z-10" />
+
+          {/* X header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: '#eff3f4' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#0f1419">
+              <path d="M7.414 13l5.043 5.04-1.414 1.42L3.586 12l7.457-7.46 1.414 1.42L7.414 11H21v2H7.414z" />
+            </svg>
+            <span className="font-bold" style={{ fontFamily: '-apple-system, sans-serif', color: '#0f1419' }}>
+              Post
+            </span>
+            <div style={{ color: '#0f1419' }}>
+              <XLogo />
+            </div>
+          </div>
+
+          {/* Tweet content */}
+          <div className="p-4">
+            <div className="flex gap-3">
+              {/* Avatar */}
+              <div
+                className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-sm"
+                style={{ background: '#1d9bf0' }}
+              >
+                {sampleXContent.displayName.charAt(0)}
+              </div>
+
+              <div className="flex-1">
+                {/* User info */}
+                <div className="flex items-center gap-1">
+                  <span className="font-bold text-[15px]" style={{ color: '#0f1419' }}>
+                    {sampleXContent.displayName}
+                  </span>
+                  <svg width="18" height="18" viewBox="0 0 22 22" fill="#1d9bf0">
+                    <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.852-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" />
+                  </svg>
+                  <span className="text-[15px]" style={{ color: '#536471' }}>
+                    @{sampleXContent.username} · 2h
+                  </span>
+                </div>
+
+                {/* Tweet text */}
+                <p
+                  className="text-[15px] leading-5 mt-2 whitespace-pre-wrap"
+                  style={{ color: '#0f1419', fontFamily: '-apple-system, sans-serif' }}
+                >
+                  {tweet.text}
+                </p>
+
+                {/* Tweet metrics */}
+                <div className="flex items-center gap-6 mt-4 text-sm" style={{ color: '#536471' }}>
+                  <span>{tweet.likes} likes</span>
+                  <span>{tweet.retweets} reposts</span>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-between mt-4 pt-3 border-t" style={{ borderColor: '#eff3f4' }}>
+                  {[
+                    'M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z',
+                    'M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z',
+                    'M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91z',
+                    'M12 2.59l5.7 5.7-1.41 1.42L13 6.41V16h-2V6.41l-3.3 3.3-1.41-1.42L12 2.59zM21 15l-.001 3.999c0 1.11-.9 2-2 2h-14c-1.1 0-2-.9-2-2V15h2v4h14v-4h2z',
+                  ].map((icon, idx) => (
+                    <button key={idx} className="p-2 rounded-full hover:bg-blue-50" style={{ color: '#536471' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d={icon} />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tweet navigation */}
+          <div className="flex items-center justify-center gap-4 px-4 py-3 border-t" style={{ borderColor: '#eff3f4' }}>
+            {sampleXContent.tweets.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentTweet(idx)}
+                className="w-2 h-2 rounded-full transition-colors"
+                style={{
+                  background: idx === currentTweet ? '#1d9bf0' : '#cfd9de',
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Home indicator */}
+          <div className="flex justify-center py-2">
+            <div className="w-32 h-1 rounded-full bg-black" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Instagram phone preview
 const InstagramPreview = () => (
@@ -240,7 +394,7 @@ const InstagramPreview = () => (
 );
 
 export const InkContentPreview: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'blog' | 'instagram'>('blog');
+  const [activeTab, setActiveTab] = useState<'blog' | 'instagram' | 'x'>('blog');
 
   return (
     <div
@@ -271,15 +425,16 @@ export const InkContentPreview: React.FC = () => {
         </header>
 
         {/* Tab navigation */}
-        <div className="flex items-center gap-2 mb-8">
+        <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
           {[
             { id: 'blog', label: 'Blog Preview', icon: '📝' },
-            { id: 'instagram', label: 'Instagram Preview', icon: '📱' },
+            { id: 'instagram', label: 'Instagram Preview', icon: '📸' },
+            { id: 'x', label: 'X Preview', icon: '🐦' },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as 'blog' | 'instagram')}
-              className="px-6 py-3 rounded-xl text-sm font-medium transition-all"
+              onClick={() => setActiveTab(tab.id as 'blog' | 'instagram' | 'x')}
+              className="px-6 py-3 rounded-xl text-sm font-medium transition-all whitespace-nowrap"
               style={{
                 background: activeTab === tab.id ? tokens.colors.paper.white : 'transparent',
                 color: activeTab === tab.id ? tokens.colors.ink[700] : tokens.colors.text.muted,
@@ -297,7 +452,9 @@ export const InkContentPreview: React.FC = () => {
           className="rounded-2xl p-8"
           style={{ background: tokens.colors.paper.warm }}
         >
-          {activeTab === 'blog' ? <BlogPreview /> : <InstagramPreview />}
+          {activeTab === 'blog' && <BlogPreview />}
+          {activeTab === 'instagram' && <InstagramPreview />}
+          {activeTab === 'x' && <XPhonePreview />}
         </div>
 
         {/* Actions */}

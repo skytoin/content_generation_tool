@@ -22,7 +22,7 @@ let ritetagFunctions: {
 } | null = null
 
 try {
-  const ritetag = require('../api/generate/ritetag-client')
+  const ritetag = require('../../app/api/generate/ritetag-client')
   ritetagFunctions = {
     isRiteTagConfigured: ritetag.isRiteTagConfigured,
     getHashtagSuggestions: ritetag.getHashtagSuggestions,

@@ -26,6 +26,7 @@ import {
   type AnalyticsRequest,
   type AggregatedAnalytics,
 } from '@/lib/analytics'
+import { mapAnalysisToStyleRecommendations } from '@/lib/style-recommendations'
 
 // Anthropic client for premium tier
 const anthropic = new Anthropic({
@@ -212,6 +213,18 @@ export interface ContentArchitectResponse {
     summary: string
   }
 
+  // SEO Intelligence (if DataForSEO available)
+  seoInsights?: {
+    topKeywords: Array<{ keyword: string; volume: number; difficulty: number; clicks: number; intent: string }>
+    competitorDomains: Array<{ domain: string; rank: number; traffic: number; keywords: number }>
+    contentGaps: Array<{ keyword: string; competitorCount: number; avgVolume: number }>
+    keywordWarnings: Array<{ keyword: string; reason: string; alternatives: string[] }>
+    searchIntentBreakdown: Record<string, number>
+  }
+
+  // Style option recommendations derived from analysis
+  styleRecommendations?: Record<string, string>
+
   // Image generation recommendations (if requested)
   imageRecommendations?: {
     needed: boolean
@@ -283,12 +296,34 @@ export async function runContentArchitectPipeline(
   // Only run analytics for standard and premium tiers
   if (tier !== 'budget' && analyticsCapabilities.available.length > 0) {
     try {
+      // Use AI analysis results (Stage 1) to build meaningful analytics queries
+      // instead of naive word extraction from raw description/goals
+      const analyzedIndustry = analysis.business_context?.industry
+        || request.businessInfo?.industry || ''
+      const analyzedCompanyType = analysis.business_context?.company_type || ''
+      const companyName = request.businessInfo?.companyName || ''
+
+      // Prefer AI-analyzed company type (e.g., "consultation and tax services") over
+      // literal company name (e.g., "New Business Set-Up Inc") which contains generic
+      // words that pollute seed keywords ("set-up" → "set up paypal business account")
+      const analyticsTopic = analyzedIndustry
+        ? `${analyzedIndustry} ${analyzedCompanyType || 'services'}`.trim()
+        : request.description.slice(0, 200)
+
+      // Build keywords from AI analysis (industry, pain points, audience)
+      // instead of naive word extraction from goal text
+      const intelligentKeywords = buildAnalyticsKeywords(analysis, request)
+
       const analyticsRequest: AnalyticsRequest = {
-        topic: request.description.slice(0, 200),
-        keywords: extractKeywords(request.description),
+        topic: analyticsTopic,
+        keywords: intelligentKeywords,
         competitorUrls: request.competitorUrls,
         targetPlatform: request.platforms?.[0] as any,
         userTier: tier,
+        industry: analyzedIndustry || request.businessInfo?.industry,
+        companyName: request.businessInfo?.companyName,
+        userKeywords: intelligentKeywords,
+        goals: request.goals?.join(', '),
       }
 
       const analyticsResponse = await runAnalytics(analyticsRequest)
@@ -411,6 +446,37 @@ export async function runContentArchitectPipeline(
   // ========== BUILD FINAL RESPONSE ==========
   console.log('🏗️ CONTENT ARCHITECT: Complete!')
 
+  // Build SEO insights data
+  const seoInsightsData = analyticsData?.seoAnalysis && analyticsData.seoAnalysis.dataSource === 'dataforseo' ? {
+    topKeywords: analyticsData.seoAnalysis.suggestedKeywords.slice(0, 15).map(k => ({
+      keyword: k.keyword,
+      volume: k.searchVolume,
+      difficulty: k.difficulty,
+      clicks: k.clicks,
+      intent: k.searchIntent,
+    })),
+    competitorDomains: analyticsData.seoAnalysis.discoveredCompetitors.map(c => ({
+      domain: c.domain,
+      rank: c.rank,
+      traffic: c.organicTraffic,
+      keywords: c.keywords,
+    })),
+    contentGaps: analyticsData.seoAnalysis.contentGaps.slice(0, 10),
+    keywordWarnings: analyticsData.seoAnalysis.flaggedKeywords.map(f => ({
+      keyword: f.keyword,
+      reason: f.reason,
+      alternatives: f.suggestedAlternatives.map(a => a.keyword),
+    })),
+    searchIntentBreakdown: analyticsData.seoAnalysis.searchIntentBreakdown,
+  } : undefined
+
+  // Derive style recommendations from analysis
+  const styleRecommendations = mapAnalysisToStyleRecommendations(
+    analysis,
+    strategy,
+    seoInsightsData
+  )
+
   return {
     success: true,
     tier,
@@ -436,6 +502,8 @@ export async function runContentArchitectPipeline(
       competitorInsights: analyticsData.pageSpeed,
       summary: analyticsData.summary,
     } : undefined,
+    seoInsights: seoInsightsData,
+    styleRecommendations: Object.keys(styleRecommendations).length > 0 ? styleRecommendations : undefined,
     imageRecommendations,
     executionPlan,
     metadata: {
@@ -501,21 +569,64 @@ function buildFallbackAnalysis(request: ContentArchitectRequest): any {
   }
 }
 
-function extractKeywords(description: string): string[] {
-  // Simple keyword extraction
-  const words = description
-    .toLowerCase()
-    .replace(/[^\w\s]/g, ' ')
-    .split(/\s+/)
-    .filter(w => w.length > 4)
+/**
+ * Build analytics keywords from AI analysis output instead of naive word extraction.
+ *
+ * The old extractKeywords() split goal text into individual words like "build", "local",
+ * "awareness" which DataForSEO expanded into unrelated tech keywords. This function
+ * uses the structured AI analysis to produce industry-relevant compound phrases.
+ */
+function buildAnalyticsKeywords(analysis: any, request: ContentArchitectRequest): string[] {
+  const keywords: string[] = []
+  const seen = new Set<string>()
 
-  const stopWords = new Set([
-    'about', 'would', 'could', 'should', 'their', 'there', 'these', 'those',
-    'which', 'where', 'being', 'having', 'doing', 'during', 'before', 'after',
-  ])
+  const addKeyword = (kw: string) => {
+    const normalized = kw.toLowerCase().trim()
+    if (normalized && normalized.length > 2 && !seen.has(normalized)) {
+      seen.add(normalized)
+      keywords.push(normalized)
+    }
+  }
 
-  const filtered = words.filter(w => !stopWords.has(w))
-  return [...new Set(filtered)].slice(0, 10)
+  const bc = analysis.business_context || {}
+  const ap = analysis.audience_profile || {}
+
+  // Industry term (e.g., "finance")
+  if (bc.industry) addKeyword(bc.industry)
+
+  // Industry + company type compound (e.g., "finance consultancy")
+  if (bc.industry && bc.company_type && bc.company_type !== bc.industry) {
+    addKeyword(`${bc.industry} ${bc.company_type}`)
+  }
+
+  // Audience pain points (already extracted by the AI, e.g., "IRS audit", "tax planning")
+  if (Array.isArray(ap.pain_points)) {
+    for (const pp of ap.pain_points.slice(0, 5)) {
+      addKeyword(pp)
+    }
+  }
+
+  // Desired outcomes (e.g., "tax relief", "business formation")
+  if (Array.isArray(ap.desired_outcomes)) {
+    for (const outcome of ap.desired_outcomes.slice(0, 5)) {
+      addKeyword(outcome)
+    }
+  }
+
+  // Business model if meaningful
+  if (bc.business_model) addKeyword(bc.business_model)
+
+  // Fallback: use explicit industry from form data if AI analysis was empty
+  if (keywords.length === 0 && request.businessInfo?.industry) {
+    addKeyword(request.businessInfo.industry)
+  }
+
+  // Last resort: use company name as a keyword
+  if (keywords.length === 0 && request.businessInfo?.companyName) {
+    addKeyword(request.businessInfo.companyName)
+  }
+
+  return keywords.slice(0, 10)
 }
 
 function buildStrategyPrompt(
@@ -532,6 +643,43 @@ function buildStrategyPrompt(
     prompt += `## Analytics Insights\n${analytics.summary}\n\n`
     if (analytics.trends) {
       prompt += `### Trend Data\n${JSON.stringify(analytics.trends, null, 2)}\n\n`
+    }
+
+    if (analytics.seoAnalysis && analytics.seoAnalysis.dataSource === 'dataforseo') {
+      const seo = analytics.seoAnalysis
+      prompt += `## SEO Intelligence\n`
+
+      if (seo.suggestedKeywords.length > 0) {
+        prompt += `### Keyword Opportunities (with volume, difficulty, actual clicks, intent)\n`
+        for (const kw of seo.suggestedKeywords.slice(0, 10)) {
+          prompt += `- "${kw.keyword}" — Vol: ${kw.searchVolume}, Diff: ${kw.difficulty}, Clicks: ${kw.clicks}, Intent: ${kw.searchIntent}\n`
+        }
+        prompt += `\n`
+      }
+
+      if (seo.discoveredCompetitors.length > 0) {
+        prompt += `### Competitor Landscape\n`
+        for (const c of seo.discoveredCompetitors) {
+          prompt += `- ${c.domain} — Rank: ${c.rank}, Traffic: ${c.organicTraffic}, Keywords: ${c.keywords}\n`
+        }
+        prompt += `\n`
+      }
+
+      if (seo.contentGaps.length > 0) {
+        prompt += `### Content Gaps (keywords competitors rank for but user doesn't)\n`
+        for (const gap of seo.contentGaps.slice(0, 10)) {
+          prompt += `- "${gap.keyword}" — ${gap.competitorCount} competitors, avg vol: ${gap.avgVolume}\n`
+        }
+        prompt += `\n`
+      }
+
+      if (seo.flaggedKeywords.length > 0) {
+        prompt += `### Keyword Warnings\n`
+        for (const flag of seo.flaggedKeywords) {
+          prompt += `- "${flag.keyword}" — ${flag.reason}\n`
+        }
+        prompt += `\n`
+      }
     }
   }
 
@@ -552,7 +700,7 @@ Format your response with these sections:
   return prompt
 }
 
-function parseStrategyResponse(response: string): any {
+export function parseStrategyResponse(response: string): any {
   const strategy: any = {
     overview: '',
     primaryFocus: '',
@@ -561,36 +709,93 @@ function parseStrategyResponse(response: string): any {
     contentCalendar: '',
   }
 
-  // Extract sections using regex
-  const overviewMatch = response.match(/OVERVIEW[:\s]*([^\n]+(?:\n(?![A-Z]{2,})[^\n]+)*)/i)
+  // Use explicit section names as boundaries (no /i flag — section headers are always ALL CAPS)
+  const SECTIONS = 'OVERVIEW|PRIMARY FOCUS|CONTENT PILLARS|PLATFORM STRATEGY|CONTENT CALENDAR'
+  const boundary = `\\*{0,2}(?:${SECTIONS})\\*{0,2}`
+
+  // Extract overview
+  const overviewMatch = response.match(new RegExp(`\\*{0,2}OVERVIEW\\*{0,2}[:\\s]*([^\\n]+(?:\\n(?!${boundary})[^\\n]+)*)`))
   if (overviewMatch) strategy.overview = overviewMatch[1].trim()
 
-  const focusMatch = response.match(/PRIMARY FOCUS[:\s]*([^\n]+(?:\n(?![A-Z]{2,})[^\n]+)*)/i)
+  // Extract primary focus
+  const focusMatch = response.match(new RegExp(`\\*{0,2}PRIMARY FOCUS\\*{0,2}[:\\s]*([^\\n]+(?:\\n(?!${boundary})[^\\n]+)*)`))
   if (focusMatch) strategy.primaryFocus = focusMatch[1].trim()
 
-  const pillarsMatch = response.match(/CONTENT PILLARS[:\s]*([\s\S]*?)(?=\n[A-Z]{2,}|$)/i)
+  // Extract content pillars
+  const pillarsMatch = response.match(new RegExp(`\\*{0,2}CONTENT PILLARS\\*{0,2}[:\\s]*([\\s\\S]*?)(?=\\n${boundary}|$)`))
   if (pillarsMatch) {
     const pillarsText = pillarsMatch[1]
-    const pillars = pillarsText.match(/[-•*\d.]\s*([^\n]+)/g)
-    if (pillars) {
-      strategy.contentPillars = pillars.map((p: string) => p.replace(/^[-•*\d.]\s*/, '').trim())
+    const lines = pillarsText.split('\n')
+    const pillars: string[] = []
+    for (const line of lines) {
+      if (!line.trim()) continue
+      // Skip indented sub-bullets (lines starting with 2+ spaces then a dash/bullet)
+      if (/^\s{2,}[-•*]/.test(line)) continue
+      const trimmed = line.trim()
+      // Match numbered items: "1. ...", "1) ...", or bullet items: "- ...", "• ...", "* ..."
+      const numberedMatch = trimmed.match(/^\d+[.)]\s+(.+)/)
+      const bulletMatch = trimmed.match(/^[-•*]\s+(.+)/)
+      if (numberedMatch) {
+        pillars.push(numberedMatch[1].replace(/^["\u201C]|["\u201D]$/g, '').trim())
+      } else if (bulletMatch) {
+        pillars.push(bulletMatch[1].replace(/^["\u201C]|["\u201D]$/g, '').trim())
+      }
+    }
+    strategy.contentPillars = pillars
+  }
+
+  // Extract platform strategy — line-by-line parsing to avoid complex regex issues
+  const platformMatch = response.match(new RegExp(`\\*{0,2}PLATFORM STRATEGY\\*{0,2}[:\\s]*([\\s\\S]*?)(?=\\n${boundary}|$)`))
+  if (platformMatch) {
+    const platformText = platformMatch[1]
+    const knownPlatforms = ['blog', 'instagram', 'twitter', 'facebook', 'linkedin', 'email']
+    const lines = platformText.split('\n')
+    let currentPlatform: string | null = null
+    const platformBlocks: Record<string, string[]> = {}
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+
+      // Check if this line starts a new known platform
+      let matchedPlatform: string | null = null
+      let contentAfterName = ''
+
+      for (const p of knownPlatforms) {
+        const re = new RegExp(`^\\*{0,2}${p}\\*{0,2}\\s*:\\s*(.*)`, 'i')
+        const m = trimmed.match(re)
+        if (m) {
+          matchedPlatform = p
+          contentAfterName = m[1]
+          break
+        }
+      }
+      // Also check for X / X (Twitter)
+      if (!matchedPlatform) {
+        const xMatch = trimmed.match(/^\*{0,2}X\s*(?:\(Twitter\))?\*{0,2}\s*:\s*(.*)/i)
+        if (xMatch) {
+          matchedPlatform = 'twitter'
+          contentAfterName = xMatch[1]
+        }
+      }
+
+      if (matchedPlatform) {
+        currentPlatform = matchedPlatform
+        platformBlocks[currentPlatform] = contentAfterName ? [contentAfterName] : []
+      } else if (currentPlatform) {
+        platformBlocks[currentPlatform].push(trimmed)
+      }
+    }
+
+    for (const [key, contentLines] of Object.entries(platformBlocks)) {
+      if (contentLines.length > 0) {
+        strategy.platformStrategy[key] = contentLines.join('\n')
+      }
     }
   }
 
-  const platformMatch = response.match(/PLATFORM STRATEGY[:\s]*([\s\S]*?)(?=\n[A-Z]{2,}|$)/i)
-  if (platformMatch) {
-    const platformText = platformMatch[1]
-    const platforms = ['Blog', 'Instagram', 'Twitter', 'Facebook', 'LinkedIn', 'Email']
-    platforms.forEach(platform => {
-      const platformRegex = new RegExp(`${platform}[:\\s]*([^\\n]+(?:\\n(?![A-Z][a-z]+:)[^\\n]+)*)`, 'i')
-      const match = platformText.match(platformRegex)
-      if (match) {
-        strategy.platformStrategy[platform.toLowerCase()] = match[1].trim()
-      }
-    })
-  }
-
-  const calendarMatch = response.match(/CONTENT CALENDAR[:\s]*([\s\S]*?)(?=\n[A-Z]{2,}|$)/i)
+  // Extract content calendar
+  const calendarMatch = response.match(new RegExp(`\\*{0,2}CONTENT CALENDAR\\*{0,2}[:\\s]*([\\s\\S]*?)(?=\\n${boundary}|$)`))
   if (calendarMatch) strategy.contentCalendar = calendarMatch[1].trim()
 
   return strategy
@@ -621,6 +826,21 @@ function buildRecommendationsPrompt(
   if (analytics?.hashtags) {
     prompt += `## Hashtag Strategy Available\nTotal reach: ${analytics.hashtags.totalReach}\n`
     prompt += `Strategy: ${analytics.hashtags.strategy}\n\n`
+  }
+
+  if (analytics?.seoAnalysis && analytics.seoAnalysis.dataSource === 'dataforseo') {
+    const seo = analytics.seoAnalysis
+    prompt += `## SEO Data Available\n`
+    if (seo.suggestedKeywords.length > 0) {
+      prompt += `Top keyword targets: ${seo.suggestedKeywords.slice(0, 5).map(k => `"${k.keyword}" (vol: ${k.searchVolume})`).join(', ')}\n`
+    }
+    if (seo.contentGaps.length > 0) {
+      prompt += `Content gaps to fill: ${seo.contentGaps.slice(0, 5).map(g => `"${g.keyword}"`).join(', ')}\n`
+    }
+    if (Object.keys(seo.searchIntentBreakdown).length > 0) {
+      prompt += `Search intent mix: ${JSON.stringify(seo.searchIntentBreakdown)}\n`
+    }
+    prompt += `\nUse this SEO data to suggest specific keyword targets for each service recommendation.\n\n`
   }
 
   prompt += `## Your Task
@@ -777,12 +997,17 @@ export function formatContentArchitectOutput(
 `)
 
   // Analysis Summary
+  const contextEntries = response.analysis.businessContext
+    ? Object.entries(response.analysis.businessContext)
+        .filter(([, v]) => v !== null && v !== undefined && v !== '')
+        .map(([k, v]) => `• ${k.replace(/_/g, ' ')}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
+        .join('\n')
+    : ''
   sections.push(`
 📊 ANALYSIS SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${response.analysis.summary}
-
-Business Context: ${JSON.stringify(response.analysis.businessContext, null, 2)}
+${contextEntries ? `\nBusiness Context:\n${contextEntries}` : ''}
 `)
 
   // Strategy
@@ -839,6 +1064,61 @@ ${response.analyticsInsights.toolsUnavailable.length > 0
   ? `\nNote: Some tools were unavailable (${response.analyticsInsights.toolsUnavailable.join(', ')})`
   : ''}
 `)
+  }
+
+  // SEO Intelligence
+  if (response.seoInsights) {
+    const seo = response.seoInsights
+    let seoContent = ''
+
+    if (seo.topKeywords.length > 0) {
+      seoContent += `Keyword Opportunities:\n`
+      for (const kw of seo.topKeywords) {
+        seoContent += `  ${kw.keyword} — Volume: ${kw.volume}, Difficulty: ${kw.difficulty}, Clicks: ${kw.clicks}, Intent: ${kw.intent}\n`
+      }
+      seoContent += '\n'
+    }
+
+    if (seo.competitorDomains.length > 0) {
+      seoContent += `Competitor Domains:\n`
+      for (const c of seo.competitorDomains) {
+        seoContent += `  ${c.domain} — Rank: ${c.rank}, Traffic: ${c.traffic}, Keywords: ${c.keywords}\n`
+      }
+      seoContent += '\n'
+    }
+
+    if (seo.contentGaps.length > 0) {
+      seoContent += `Content Gaps:\n`
+      for (const gap of seo.contentGaps) {
+        seoContent += `  "${gap.keyword}" — ${gap.competitorCount} competitors, Avg Volume: ${gap.avgVolume}\n`
+      }
+      seoContent += '\n'
+    }
+
+    if (seo.keywordWarnings.length > 0) {
+      seoContent += `Keyword Warnings:\n`
+      for (const w of seo.keywordWarnings) {
+        seoContent += `  "${w.keyword}" — ${w.reason}\n`
+        if (w.alternatives.length > 0) {
+          seoContent += `    Alternatives: ${w.alternatives.join(', ')}\n`
+        }
+      }
+      seoContent += '\n'
+    }
+
+    if (Object.keys(seo.searchIntentBreakdown).length > 0) {
+      seoContent += `Search Intent Breakdown:\n`
+      for (const [intent, count] of Object.entries(seo.searchIntentBreakdown)) {
+        seoContent += `  ${intent}: ${count} keywords\n`
+      }
+    }
+
+    if (seoContent) {
+      sections.push(`
+🔍 SEO INTELLIGENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${seoContent}`)
+    }
   }
 
   // Image Recommendations

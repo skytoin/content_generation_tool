@@ -40,6 +40,7 @@ export {
   InkDashboardHome,
   InkProjectsList,
   InkSettings,
+  InkProfiles,
   InkBilling,
   InkNewProject,
   InkProjectDetail,

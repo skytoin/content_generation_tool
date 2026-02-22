@@ -20,6 +20,16 @@ export const mockPrisma = {
     delete: vi.fn(),
     count: vi.fn(),
   },
+  companyProfile: {
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
+    delete: vi.fn(),
+    count: vi.fn(),
+  },
   account: {
     findUnique: vi.fn(),
     findMany: vi.fn(),

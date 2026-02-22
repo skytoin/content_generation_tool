@@ -71,6 +71,15 @@ export const TOOL_CONFIGS: Record<AnalyticsTool, ToolConfig> = {
     requiredEnvVars: ['FACEBOOK_ACCESS_TOKEN'],
     rateLimit: { requests: 200, period: 'hour' },
   },
+  'dataforseo': {
+    id: 'dataforseo',
+    name: 'DataForSEO',
+    description: 'Keyword research, competitor analysis, search intent, and content gap identification',
+    tier: 'paid',
+    requiredEnvVars: ['DATAFORSEO_LOGIN', 'DATAFORSEO_PASSWORD'],
+    monthlyCost: 50,
+    rateLimit: { requests: 30000, period: 'month' },
+  },
 }
 
 // Health check cache

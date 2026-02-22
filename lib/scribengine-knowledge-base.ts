@@ -606,71 +606,241 @@ export const SERVICES: Record<string, ServiceConfig> = {
     name: 'LinkedIn Content Pipeline',
     icon: '💼',
     category: 'social',
-    description: 'Professional LinkedIn posts optimized for B2B engagement and thought leadership.',
-    shortDescription: 'Professional LinkedIn posts',
+    description: 'Complete LinkedIn content generation with text posts, carousels, articles/newsletters, and polls. Includes first comment generation, optional images, voice learning, and algorithm optimization. Posts follow LinkedIn best practices: 210-char hooks, links in first comments, 3-5 hashtags at end.',
+    shortDescription: 'LinkedIn posts, carousels, articles & polls',
 
     tiers: {
-      budget: { models: [], features: [], price: 12 },
-      standard: { models: [], features: [], price: 22 },
-      premium: { models: [], features: [], price: 45 },
+      budget: {
+        models: ['GPT-4o-mini', 'GPT-4o'],
+        features: ['7-stage pipeline', 'First comment generation', 'Hashtag optimization', 'Posting calendar'],
+        analysisDepth: 'basic',
+        price: 4,
+      },
+      standard: {
+        models: ['GPT-4o-mini', 'GPT-4.1', 'GPT-4o', 'Claude Sonnet'],
+        features: ['7-stage pipeline', 'Trend research', 'Voice learning', 'Claude Sonnet critique', 'Algorithm scoring'],
+        analysisDepth: 'moderate',
+        price: 9,
+      },
+      premium: {
+        models: ['GPT-4o-mini', 'Claude Sonnet', 'Claude Opus'],
+        features: ['7-stage pipeline', 'Deep research', 'Full voice clone', 'Claude Opus polish', 'Content loop planning'],
+        analysisDepth: 'deep',
+        price: 15,
+      },
     },
 
-    deliverables: [],
-    features: [],
-    styleCategories: [],
+    deliverables: [
+      'Text posts with first comments and hashtags',
+      'Carousel slide scripts with visual directions',
+      'Long-form articles with companion posts',
+      'Polls with companion text and follow-up templates',
+      'Posting calendar recommendations',
+      'Quality and algorithm score report',
+    ],
+
+    features: [
+      '7-stage AI pipeline per content type',
+      'First comment generation (links, context, questions)',
+      'Voice learning from sample posts',
+      'LinkedIn algorithm optimization',
+      '210-character hook optimization',
+      'Content loop planning (polls → posts → articles)',
+      'Optional image generation',
+      'Reference image analysis',
+    ],
+
+    styleCategories: [
+      'content_source',
+      'voice_style',
+      'platform_optimization',
+      'engagement',
+      'content_mix',
+      'text_post',
+      'carousel',
+      'article',
+      'poll',
+    ],
 
     recommendWhen: {
-      goals: ['thought_leadership', 'b2b_leads', 'professional_networking'],
-      challenges: ['no_linkedin_presence', 'low_engagement'],
-      industries: ['b2b', 'saas', 'consulting', 'professional_services'],
-      audienceTypes: ['b2b', 'professional', 'executives'],
-      contentTypes: ['thought_leadership', 'industry_insights', 'company_updates'],
+      goals: ['thought_leadership', 'b2b_leads', 'professional_networking', 'brand_awareness', 'community_building'],
+      challenges: ['no_linkedin_presence', 'low_engagement', 'inconsistent_posting', 'poor_content_quality', 'no_content_strategy'],
+      industries: ['b2b', 'saas', 'consulting', 'professional_services', 'finance', 'technology', 'healthcare', 'education'],
+      audienceTypes: ['b2b', 'professional', 'executives', 'founders', 'marketers', 'developers'],
+      contentTypes: ['thought_leadership', 'industry_insights', 'company_updates', 'how_to', 'case_studies', 'polls', 'carousels'],
     },
 
-    useCases: [],
-    requiredInputs: [],
-    optionalInputs: [],
-    pipelineStages: [],
-    estimatedTime: { budget: 30, standard: 45, premium: 60 },
+    avoidWhen: [
+      'B2C consumer audience with no professional angle',
+      'Very young demographic (under 22)',
+      'Content requiring real-time/live updates',
+    ],
 
-    available: false,
-    comingSoon: true,
+    useCases: [
+      {
+        title: 'Thought Leadership Program',
+        description: 'Build executive presence with text posts and articles',
+        exampleInput: 'Leadership lessons from scaling a SaaS to $10M ARR',
+      },
+      {
+        title: 'Educational Carousel Series',
+        description: 'Create shareable frameworks and guides as carousels',
+        exampleInput: '7 Frameworks for Better Product Decisions',
+      },
+      {
+        title: 'Engagement Polls',
+        description: 'Drive discussion and gather industry insights with polls',
+        exampleInput: 'Remote work vs hybrid vs office - what works best?',
+      },
+      {
+        title: 'Newsletter Content',
+        description: 'Write long-form articles with companion post promotion',
+        exampleInput: 'The Future of AI in Enterprise Software',
+      },
+    ],
+
+    requiredInputs: ['topic', 'company', 'industry', 'audience'],
+    optionalInputs: ['samplePosts', 'brandGuidelines', 'sourceContent', 'keywords', 'additionalInfo', 'referenceImage'],
+
+    supportsImages: true,
+    imageOptions: ['minimal_professional', 'branded_graphic', 'infographic', 'photograph', 'illustration'],
+
+    pipelineStages: [
+      'Input processing',
+      'LinkedIn intelligence research',
+      'Voice learning (optional)',
+      'Content strategy / architecture',
+      'Content writing',
+      'Harsh critique',
+      'Final polish',
+    ],
+
+    estimatedTime: {
+      budget: 45,
+      standard: 75,
+      premium: 120,
+    },
+
+    available: true,
   },
 
   'twitter': {
     id: 'twitter',
-    name: 'Twitter/X Content Pipeline',
+    name: 'X (Twitter) Content Pipeline',
     icon: '🐦',
     category: 'social',
-    description: 'Engaging Twitter/X threads and tweets optimized for viral potential.',
-    shortDescription: 'Twitter threads & tweets',
+    description: 'Complete X (Twitter) content generation with tweets, threads, and quote tweets. Includes 7-stage pipeline per content type with voice learning, trend research, algorithm optimization, harsh critique, and final polish. Text posts get 30% more engagement than videos on X.',
+    shortDescription: 'X tweets, threads & quote tweets',
 
     tiers: {
-      budget: { models: [], features: [], price: 10 },
-      standard: { models: [], features: [], price: 18 },
-      premium: { models: [], features: [], price: 35 },
+      budget: {
+        models: ['GPT-4o-mini', 'GPT-4o'],
+        features: ['7-stage pipeline', 'Hashtag optimization', 'Algorithm scoring', 'Posting calendar'],
+        analysisDepth: 'basic',
+        price: 4,
+      },
+      standard: {
+        models: ['GPT-4o-mini', 'GPT-4.1', 'GPT-4o', 'Claude Sonnet'],
+        features: ['7-stage pipeline', 'Trend research', 'Voice learning', 'Claude Sonnet critique', 'Algorithm scoring'],
+        analysisDepth: 'moderate',
+        price: 9,
+      },
+      premium: {
+        models: ['GPT-4o-mini', 'Claude Sonnet', 'Claude Opus'],
+        features: ['7-stage pipeline', 'Deep research', 'Full voice clone', 'Claude Opus polish', 'Viral potential analysis'],
+        analysisDepth: 'deep',
+        price: 15,
+      },
     },
 
-    deliverables: [],
-    features: [],
-    styleCategories: [],
+    deliverables: [
+      'Tweet pack (5-10 tweets with hashtags and posting times)',
+      'Thread scripts (hook → body → CTA structure)',
+      'Quote tweet responses with original commentary',
+      'Posting calendar recommendations',
+      'Quality and algorithm score report',
+    ],
+
+    features: [
+      '7-stage AI pipeline per content type',
+      'Voice learning from sample tweets',
+      'X algorithm optimization (Tweepcred, engagement signals)',
+      '70-100 character hook optimization',
+      'Trend-aware content generation',
+      '1-2 hashtag strategy (21% more engagement than 3+)',
+      'Thread narrative arc planning',
+      'Quote tweet angle analysis',
+    ],
+
+    styleCategories: [
+      'content_source',
+      'voice_style',
+      'platform_optimization',
+      'engagement',
+      'tweet_generator',
+      'thread_builder',
+      'quote_tweet',
+    ],
 
     recommendWhen: {
-      goals: ['viral_content', 'brand_awareness', 'community_building'],
-      challenges: ['no_twitter_presence', 'low_engagement'],
-      industries: ['tech', 'media', 'entertainment', 'news'],
-      audienceTypes: ['b2c', 'tech_savvy', 'younger_demographics'],
-      contentTypes: ['threads', 'tweets', 'engagement_posts'],
+      goals: ['viral_content', 'brand_awareness', 'community_building', 'thought_leadership', 'audience_growth'],
+      challenges: ['no_twitter_presence', 'low_engagement', 'inconsistent_posting', 'poor_content_quality', 'no_content_strategy'],
+      industries: ['tech', 'media', 'entertainment', 'news', 'saas', 'crypto', 'finance', 'marketing'],
+      audienceTypes: ['b2c', 'b2b', 'tech_savvy', 'younger_demographics', 'developers', 'founders'],
+      contentTypes: ['threads', 'tweets', 'quote_tweets', 'engagement_posts', 'thought_leadership'],
     },
 
-    useCases: [],
-    requiredInputs: [],
-    optionalInputs: [],
-    pipelineStages: [],
-    estimatedTime: { budget: 20, standard: 30, premium: 45 },
+    avoidWhen: [
+      'Very long-form only content needs (use Blog or LinkedIn Articles)',
+      'Audiences primarily on LinkedIn/Facebook with no X presence',
+      'Content requiring heavy visual/carousel formats (use Instagram)',
+    ],
 
-    available: false,
-    comingSoon: true,
+    useCases: [
+      {
+        title: 'Tweet Pack',
+        description: 'Generate 5-10 optimized tweets around a topic with hashtags and posting times',
+        exampleInput: '5 productivity tips for remote developers',
+      },
+      {
+        title: 'Educational Thread',
+        description: 'Create a multi-tweet thread that breaks down complex topics',
+        exampleInput: 'How we scaled our SaaS from 0 to 10K users',
+      },
+      {
+        title: 'Quote Tweet Commentary',
+        description: 'Add unique perspective to trending tweets or industry news',
+        exampleInput: 'React to the latest AI regulation announcement',
+      },
+      {
+        title: 'Content Repurpose',
+        description: 'Turn blog posts or newsletters into tweet threads',
+        exampleInput: 'Convert our latest blog post on API design into a thread',
+      },
+    ],
+
+    requiredInputs: ['topic', 'company', 'industry', 'audience'],
+    optionalInputs: ['sampleTweets', 'brandGuidelines', 'sourceContent', 'keywords', 'additionalInfo'],
+
+    supportsImages: false,
+
+    pipelineStages: [
+      'Input processing',
+      'X intelligence research',
+      'Voice learning (optional)',
+      'Content strategy',
+      'Content writing',
+      'Harsh critique',
+      'Final polish',
+    ],
+
+    estimatedTime: {
+      budget: 30,
+      standard: 50,
+      premium: 80,
+    },
+
+    available: true,
   },
 
   'facebook': {

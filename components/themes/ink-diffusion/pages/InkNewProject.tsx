@@ -14,9 +14,11 @@ import { InkCard } from '../primitives/InkCard'
 import { InkProgress } from '../primitives/InkProgress'
 import { InkBadge } from '../primitives/InkBadge'
 import { InkStyleSelector } from '../primitives/InkStyleSelector'
+import { mapAnalysisToStyleRecommendations } from '@/lib/style-recommendations'
 import { GenerationTheater } from '../generation/GenerationTheater'
 import { useGenerationSimulation } from '../hooks/useGenerationSimulation'
-import { useState, Suspense, useCallback } from 'react'
+import { useState, useEffect, Suspense, useCallback } from 'react'
+import type { CompanyProfile } from './InkProfiles'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { LENGTH_TIERS, type LengthTier, type QualityTier } from '@/lib/pricing-config'
 
@@ -89,8 +91,7 @@ const socialPlatforms = [
     id: 'linkedin',
     name: 'LinkedIn',
     description: 'Professional B2B engagement',
-    features: ['Thought leadership', 'Professional tone'],
-    comingSoon: true,
+    features: ['Text posts', 'Carousels', 'Articles', 'Polls'],
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
@@ -102,15 +103,21 @@ const socialPlatforms = [
   {
     id: 'twitter',
     name: 'Twitter/X',
-    description: 'Threads and tweets for engagement',
-    features: ['Thread optimization', 'Viral hooks'],
-    comingSoon: true,
+    description: 'Tweets, threads, and quote tweets',
+    features: ['Thread optimization', 'Viral hooks', 'Voice cloning'],
     icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z" />
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
       </svg>
     ),
   },
+]
+
+// X/Twitter content types
+const xContentTypes = [
+  { id: 'tweets', name: 'Tweet Pack', description: 'Multiple standalone tweets', recommended: true },
+  { id: 'thread', name: 'Thread', description: '3x engagement of single tweets' },
+  { id: 'quote-tweets', name: 'Quote Tweets', description: '2x engagement, relationship building' },
 ]
 
 // Instagram content types
@@ -119,6 +126,14 @@ const instagramContentTypes = [
   { id: 'single_post', name: 'Single Post', description: 'One impactful image' },
   { id: 'reels_cover', name: 'Reels Cover', description: '9:16 vertical format' },
   { id: 'story', name: 'Story', description: 'Ephemeral content' },
+]
+
+// LinkedIn content types
+const linkedinContentTypes = [
+  { id: 'text-posts', name: 'Text Posts', description: 'Hook-driven posts for maximum reach', recommended: true },
+  { id: 'carousel', name: 'Carousel', description: '2.5-3x more reach than text' },
+  { id: 'article', name: 'Article', description: 'Long-form thought leadership' },
+  { id: 'poll', name: 'Poll', description: 'Built-in engagement mechanics' },
 ]
 
 // Instagram image options
@@ -140,6 +155,37 @@ const instagramImageMoods = [
 ]
 
 const carouselImageCounts = [1, 3, 5, 7, 10]
+
+// Content Architect options
+const caIndustries = [
+  { value: 'technology', label: 'Technology & SaaS' },
+  { value: 'ecommerce', label: 'E-commerce & Retail' },
+  { value: 'healthcare', label: 'Healthcare & Wellness' },
+  { value: 'finance', label: 'Finance & Fintech' },
+  { value: 'education', label: 'Education & Training' },
+  { value: 'marketing', label: 'Marketing & Agency' },
+  { value: 'professional_services', label: 'Professional Services' },
+  { value: 'other', label: 'Other' },
+]
+
+const caGoals = [
+  { value: 'brand_awareness', label: 'Brand Awareness' },
+  { value: 'lead_generation', label: 'Lead Generation' },
+  { value: 'sales', label: 'Direct Sales' },
+  { value: 'thought_leadership', label: 'Thought Leadership' },
+  { value: 'seo_traffic', label: 'SEO & Organic Traffic' },
+  { value: 'community', label: 'Community Building' },
+]
+
+const caPlatforms = [
+  { value: 'blog', label: 'Blog / Website', icon: '📝' },
+  { value: 'instagram', label: 'Instagram', icon: '📸' },
+  { value: 'linkedin', label: 'LinkedIn', icon: '💼' },
+  { value: 'twitter', label: 'Twitter / X', icon: '🐦' },
+  { value: 'facebook', label: 'Facebook', icon: '👥' },
+  { value: 'email', label: 'Email', icon: '📧' },
+  { value: 'youtube', label: 'YouTube', icon: '🎬' },
+]
 
 // Quality tiers
 const qualityTiers = [
@@ -192,7 +238,31 @@ interface WizardState {
   // Reference images for style learning
   referenceImages: string[]
   referenceImageInstructions: string
+  // X/Twitter specific
+  xContentType: string
+  tweetCount: number
+  threadLength: number
+  quoteTweetCount: number
+  targetAccounts: string
+  sampleTweets: string
+  // LinkedIn specific
+  linkedinContentType: string
+  postCount: number
+  carouselCount: number
+  articleCount: number
+  pollCount: number
+  sampleLinkedInPosts: string
+  // Content Architect specific
+  caDescription: string
+  caIndustry: string
+  caCompanyName: string
+  caGoals: string[]
+  caPlatforms: string[]
+  caIncludeImages: boolean
+  caCompetitorUrls: string
+  caAdditionalContext: string
   // Basic info
+  industry: string
   topic: string
   company: string
   audience: string
@@ -213,6 +283,10 @@ function InkNewProjectWizard() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const preselectedType = searchParams.get('type')
+  const preselectedPlatform = searchParams.get('platform')
+  const preselectedSubtype = searchParams.get('subtype')
+  const preselectedTopic = searchParams.get('topic')
+  const sourceProjectId = searchParams.get('source')
 
   const [currentStep, setCurrentStep] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
@@ -223,12 +297,13 @@ function InkNewProjectWizard() {
   const [viewMode, setViewMode] = useState<ViewMode>('wizard')
   const [projectId, setProjectId] = useState<string | null>(null)
   const [generatedContent, setGeneratedContent] = useState<string>('')
+  const [sourceLoaded, setSourceLoaded] = useState(false)
 
   const [state, setState] = useState<WizardState>({
     projectName: '',
     contentType: preselectedType || '',
-    platform: '',
-    instagramContentType: 'carousel',
+    platform: preselectedPlatform || '',
+    instagramContentType: preselectedPlatform === 'instagram' && preselectedSubtype ? preselectedSubtype : 'carousel',
     generateImages: false,
     numberOfImages: 5,
     imageStyle: 'photography',
@@ -239,7 +314,31 @@ function InkNewProjectWizard() {
     additionalImageNotes: '',
     referenceImages: [],
     referenceImageInstructions: '',
-    topic: '',
+    // X/Twitter defaults
+    xContentType: preselectedPlatform === 'twitter' && preselectedSubtype ? preselectedSubtype : 'tweets',
+    tweetCount: 7,
+    threadLength: 5,
+    quoteTweetCount: 10,
+    targetAccounts: '',
+    sampleTweets: '',
+    // LinkedIn defaults
+    linkedinContentType: preselectedPlatform === 'linkedin' && preselectedSubtype ? preselectedSubtype : 'text-posts',
+    postCount: 5,
+    carouselCount: 1,
+    articleCount: 1,
+    pollCount: 3,
+    sampleLinkedInPosts: '',
+    // Content Architect defaults
+    caDescription: '',
+    caIndustry: '',
+    caCompanyName: '',
+    caGoals: [],
+    caPlatforms: [],
+    caIncludeImages: true,
+    caCompetitorUrls: '',
+    caAdditionalContext: '',
+    industry: '',
+    topic: preselectedTopic || '',
     company: '',
     audience: '',
     goals: '',
@@ -250,8 +349,217 @@ function InkNewProjectWizard() {
     lengthTier: 'standard',
   })
 
+  // Company profile state
+  const [profiles, setProfiles] = useState<CompanyProfile[]>([])
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
+  const [profileFieldsApplied, setProfileFieldsApplied] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    fetch('/api/company-profiles')
+      .then(res => res.ok ? res.json() : [])
+      .then((data: CompanyProfile[]) => {
+        setProfiles(data)
+        // Auto-select default profile
+        const defaultProfile = data.find((p: CompanyProfile) => p.isDefault)
+        if (defaultProfile) {
+          applyProfile(defaultProfile)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  // Fetch source project data when launched from Content Launchpad
+  useEffect(() => {
+    if (!sourceProjectId) return
+
+    fetch(`/api/projects/${sourceProjectId}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(async (sourceProject) => {
+        if (!sourceProject) return
+
+        const sourceFormData = sourceProject.formData || {}
+        const sd = sourceProject.structuredData as any
+
+        const updates: Partial<WizardState> = {}
+
+        // Pre-fill from source project's form data
+        if (sourceFormData.companyName) updates.company = sourceFormData.companyName
+        if (sourceFormData.company) updates.company = sourceFormData.company
+        if (sourceFormData.industry) updates.industry = sourceFormData.industry
+        if (sourceFormData.audience) updates.audience = sourceFormData.audience
+
+        // Goals - join array to string
+        if (Array.isArray(sourceFormData.goals)) {
+          updates.goals = sourceFormData.goals.join(', ')
+        } else if (sourceFormData.goals) {
+          updates.goals = sourceFormData.goals
+        }
+
+        // If the source project has an associated company profile, load it for audience/samples
+        if (sourceProject.companyProfileId) {
+          try {
+            const profileRes = await fetch(`/api/company-profiles/${sourceProject.companyProfileId}`)
+            if (profileRes.ok) {
+              const profile = await profileRes.json()
+              if (profile.primaryAudience && !updates.audience) {
+                updates.audience = profile.primaryAudience
+              }
+              if (profile.companyName && !updates.company) {
+                updates.company = profile.companyName
+              }
+              if (profile.industry && !updates.industry) {
+                updates.industry = profile.industry
+              }
+              if (profile.primaryGoals && !updates.goals) {
+                updates.goals = profile.primaryGoals
+              }
+              if (profile.sampleContent) {
+                updates.sampleArticles = profile.sampleContent
+                updates.sampleTweets = profile.sampleContent
+                updates.sampleLinkedInPosts = profile.sampleContent
+              }
+            }
+          } catch {}
+        }
+
+        // Extract audience from structured data if not in formData or profile
+        if (!updates.audience && sd?.analysis?.audienceProfile) {
+          const ap = sd.analysis.audienceProfile
+          updates.audience = ap.primary_demographic || ap.summary || ''
+        }
+        // Fallback: parse audience from report text for old projects without structuredData
+        if (!updates.audience && sourceProject.result) {
+          const text = sourceProject.result as string
+          const demoMatch = text.match(/primary[_ ]demographic[:\s]*([^\n]+)/i)
+          if (demoMatch) {
+            updates.audience = demoMatch[1].trim()
+          } else {
+            const targetMatch = text.match(/targeting\s+([^\n.]+)/i)
+            if (targetMatch) updates.audience = targetMatch[1].trim()
+          }
+        }
+
+        // Extract industry from structured data if not in formData
+        if (!updates.industry && sd?.analysis?.businessContext?.industry) {
+          updates.industry = sd.analysis.businessContext.industry
+        }
+
+        // Add SEO keywords context to additionalInfo
+        if (sd?.seoInsights?.topKeywords?.length) {
+          const keywords = sd.seoInsights.topKeywords
+            .slice(0, 8)
+            .map((k: any) => typeof k === 'string' ? k : k?.keyword || '')
+            .filter(Boolean)
+          if (keywords.length > 0) {
+            updates.additionalInfo = `Target SEO keywords: ${keywords.join(', ')}`
+          }
+        }
+        // Fallback: parse keywords from report text for old projects without structuredData
+        if (!updates.additionalInfo && sourceProject.result) {
+          const text = sourceProject.result as string
+          const kwSection = text.match(/Keyword Opportunities:\n([\s\S]*?)(?:\n\n|\nCompetitor|\nContent Gaps)/i)
+          if (kwSection) {
+            const kwLines = kwSection[1].match(/^\s+(.+?)\s+—\s+Volume:/gm)
+            if (kwLines && kwLines.length > 0) {
+              const parsed = kwLines
+                .slice(0, 8)
+                .map((line: string) => line.replace(/^\s+/, '').replace(/\s+—\s+Volume:.*/, '').trim())
+                .filter(Boolean)
+              if (parsed.length > 0) {
+                updates.additionalInfo = `Target SEO keywords: ${parsed.join(', ')}`
+              }
+            }
+          }
+        }
+
+        // Pre-fill style selections: use stored recommendations or compute on-the-fly
+        if (sd?.styleRecommendations && typeof sd.styleRecommendations === 'object') {
+          updates.styleSelections = { ...sd.styleRecommendations }
+        } else if (sd?.analysis) {
+          // Compute style recommendations on-the-fly from existing analysis data
+          // (works for old projects that don't have styleRecommendations stored)
+          const computed = mapAnalysisToStyleRecommendations(
+            sd.analysis,
+            sd.strategy,
+            sd.seoInsights
+          )
+          if (Object.keys(computed).length > 0) {
+            updates.styleSelections = computed
+          }
+        }
+
+        // Auto-generate project name from platform + topic
+        if (preselectedTopic) {
+          const platformLabel =
+            preselectedPlatform === 'twitter' ? 'X' :
+            preselectedPlatform === 'linkedin' ? 'LinkedIn' :
+            preselectedPlatform === 'instagram' ? 'Instagram' :
+            preselectedType === 'blog-post' ? 'Blog' : ''
+          if (platformLabel) {
+            updates.projectName = `${platformLabel}: ${preselectedTopic}`
+          }
+        }
+
+        setState(prev => ({ ...prev, ...updates }))
+        setSourceLoaded(true)
+
+        // Auto-advance to details step (skip type/platform selection)
+        if (preselectedType && (preselectedType === 'blog-post' || preselectedPlatform)) {
+          // Step 0 = type, Step 1 = platform (for social), Step 2+ = details
+          // Find the details step index
+          setCurrentStep(prev => {
+            if (preselectedType === 'social-media' && preselectedPlatform) return 2
+            if (preselectedType === 'blog-post') return 1
+            return prev
+          })
+        }
+      })
+      .catch(() => {})
+  }, [sourceProjectId])
+
+  const applyProfile = (profile: CompanyProfile) => {
+    setSelectedProfileId(profile.id)
+    const applied = new Set<string>()
+    const updates: Partial<WizardState> = {}
+
+    if (profile.companyName) { updates.company = profile.companyName; updates.caCompanyName = profile.companyName; applied.add('company') }
+    if (profile.primaryAudience) { updates.audience = profile.primaryAudience; applied.add('audience') }
+    if (profile.primaryGoals) { updates.goals = profile.primaryGoals; applied.add('goals') }
+    if (profile.sampleContent) { updates.sampleArticles = profile.sampleContent; applied.add('sampleArticles') }
+    if (profile.brandGuidelines) { updates.additionalInfo = profile.brandGuidelines; applied.add('additionalInfo') }
+    if (profile.sampleContent) { updates.sampleTweets = profile.sampleContent; applied.add('sampleTweets') }
+    if (profile.sampleContent) { updates.sampleLinkedInPosts = profile.sampleContent; applied.add('sampleLinkedInPosts') }
+    if (profile.industry) { updates.industry = profile.industry; applied.add('industry') }
+    // Content Architect fields from profile
+    if (profile.industry) { updates.caIndustry = profile.industry; applied.add('caIndustry') }
+    if (profile.brandGuidelines) { updates.caAdditionalContext = profile.brandGuidelines; applied.add('caAdditionalContext') }
+
+    setState(prev => ({ ...prev, ...updates }))
+    setProfileFieldsApplied(applied)
+  }
+
+  const clearProfile = () => {
+    setSelectedProfileId(null)
+    const clearedFields: Partial<WizardState> = {}
+    profileFieldsApplied.forEach(field => {
+      if (field === 'company' || field === 'audience' || field === 'goals' || field === 'industry' || field === 'sampleArticles' || field === 'additionalInfo' || field === 'sampleTweets' || field === 'sampleLinkedInPosts' || field === 'caCompanyName' || field === 'caIndustry' || field === 'caAdditionalContext') {
+        clearedFields[field as keyof WizardState] = '' as any
+      }
+    })
+    setState(prev => ({ ...prev, ...clearedFields }))
+    setProfileFieldsApplied(new Set())
+  }
+
   const updateState = <K extends keyof WizardState>(key: K, value: WizardState[K]) => {
     setState({ ...state, [key]: value })
+    // If user manually edits a profile-filled field, remove the "from profile" indicator
+    if (profileFieldsApplied.has(key)) {
+      setProfileFieldsApplied(prev => {
+        const next = new Set(prev)
+        next.delete(key)
+        return next
+      })
+    }
   }
 
   // Generation simulation hook
@@ -274,7 +582,10 @@ function InkNewProjectWizard() {
 
   const isSocialMedia = state.contentType === 'social-media'
   const isInstagram = isSocialMedia && state.platform === 'instagram'
+  const isTwitter = isSocialMedia && state.platform === 'twitter'
+  const isLinkedIn = isSocialMedia && state.platform === 'linkedin'
   const isBlogPost = state.contentType === 'blog-post'
+  const isContentArchitect = state.contentType === 'content-architect'
 
   // Dynamic steps based on content type
   const getSteps = () => {
@@ -286,13 +597,22 @@ function InkNewProjectWizard() {
       baseSteps.push({ id: 'platform', label: 'Platform' })
     }
 
-    baseSteps.push(
-      { id: 'details', label: 'Details' },
-      { id: 'style', label: 'Style' },
-    )
+    baseSteps.push({ id: 'details', label: 'Details' })
+
+    if (!isContentArchitect) {
+      baseSteps.push({ id: 'style', label: 'Style' })
+    }
 
     if (isInstagram) {
       baseSteps.push({ id: 'images', label: 'Images' })
+    }
+
+    if (isTwitter) {
+      baseSteps.push({ id: 'x-options', label: 'Options' })
+    }
+
+    if (isLinkedIn) {
+      baseSteps.push({ id: 'linkedin-options', label: 'Options' })
     }
 
     baseSteps.push({ id: 'quality', label: 'Quality' })
@@ -307,9 +627,13 @@ function InkNewProjectWizard() {
     switch (stepId) {
       case 'type': return state.contentType && state.projectName.trim()
       case 'platform': return state.platform
-      case 'details': return state.topic.trim() && state.company.trim() && state.audience.trim()
+      case 'details': return isContentArchitect
+        ? state.caDescription.trim().length >= 10
+        : state.topic.trim() && state.company.trim() && state.audience.trim()
       case 'style': return true
       case 'images': return true
+      case 'x-options': return true
+      case 'linkedin-options': return true
       case 'quality': return state.qualityTier
       default: return false
     }
@@ -335,6 +659,118 @@ function InkNewProjectWizard() {
     return servicePricing[state.contentType]?.[state.qualityTier] ?? 0
   }
 
+  // LinkedIn formatting functions
+  const formatLinkedInTextPosts = (result: any): string => {
+    const posts = result.posts || []
+    let content = `\u{1F4BC} LINKEDIN TEXT POSTS\n\n`
+    posts.forEach((post: any, i: number) => {
+      content += `--- Post ${i + 1} ---\n`
+      content += `${post.text}\n`
+      content += `[${post.characterCount} chars | ${post.contentType}]\n`
+      if (post.hashtags?.length > 0) {
+        content += `Hashtags: ${post.hashtags.join(' ')}\n`
+      }
+      if (post.firstComment) {
+        content += `First Comment: ${post.firstComment}\n`
+      }
+      content += `\n`
+    })
+    if (result.qualityReport) {
+      content += `\n\u{1F4CA} QUALITY REPORT\n`
+      content += `Score: ${result.qualityReport.overallScore}/10\n`
+      content += `Algorithm: ${result.qualityReport.algorithmScore}/10\n`
+    }
+    return content
+  }
+
+  const formatLinkedInCarousels = (result: any): string => {
+    const carousels = result.carousels || []
+    let content = `\u{1F3A0} LINKEDIN CAROUSEL\n\n`
+    carousels.forEach((carousel: any, i: number) => {
+      content += `--- Carousel ${i + 1} ---\n`
+      content += `Caption: ${carousel.caption}\n`
+      content += `[${carousel.captionCharacterCount} chars]\n`
+      if (carousel.slides?.length > 0) {
+        carousel.slides.forEach((slide: any) => {
+          content += `  Slide ${slide.slideNumber}: ${slide.headline}\n`
+          content += `    ${slide.body}\n`
+          if (slide.visualDirection) {
+            content += `    Visual: ${slide.visualDirection}\n`
+          }
+        })
+      }
+      if (carousel.hashtags?.length > 0) {
+        content += `Hashtags: ${carousel.hashtags.join(' ')}\n`
+      }
+      if (carousel.firstComment) {
+        content += `First Comment: ${carousel.firstComment}\n`
+      }
+      content += `\n`
+    })
+    if (result.qualityReport) {
+      content += `\n\u{1F4CA} QUALITY REPORT\n`
+      content += `Score: ${result.qualityReport.overallScore}/10\n`
+      content += `Algorithm: ${result.qualityReport.algorithmScore}/10\n`
+    }
+    return content
+  }
+
+  const formatLinkedInArticles = (result: any): string => {
+    const articles = result.articles || []
+    let content = `\u{1F4F0} LINKEDIN ARTICLE\n\n`
+    articles.forEach((article: any, i: number) => {
+      content += `--- Article ${i + 1} ---\n`
+      content += `Title: ${article.title}\n`
+      content += `Subtitle: ${article.subtitle}\n`
+      content += `[${article.wordCount} words]\n\n`
+      content += `${article.body}\n\n`
+      if (article.companionPost) {
+        content += `Companion Post: ${article.companionPost}\n`
+      }
+      if (article.companionPostFirstComment) {
+        content += `First Comment: ${article.companionPostFirstComment}\n`
+      }
+      if (article.seoKeywords?.length > 0) {
+        content += `SEO Keywords: ${article.seoKeywords.join(', ')}\n`
+      }
+      content += `\n`
+    })
+    if (result.qualityReport) {
+      content += `\n\u{1F4CA} QUALITY REPORT\n`
+      content += `Score: ${result.qualityReport.overallScore}/10\n`
+      content += `Depth: ${result.qualityReport.depthScore}/10\n`
+    }
+    return content
+  }
+
+  const formatLinkedInPolls = (result: any): string => {
+    const polls = result.polls || []
+    let content = `\u{1F4CA} LINKEDIN POLLS\n\n`
+    polls.forEach((poll: any, i: number) => {
+      content += `--- Poll ${i + 1} ---\n`
+      content += `Question: ${poll.question}\n`
+      content += `[${poll.questionCharacterCount} chars]\n`
+      if (poll.options?.length > 0) {
+        poll.options.forEach((opt: string, j: number) => {
+          content += `  Option ${j + 1}: ${opt}\n`
+        })
+      }
+      if (poll.companionText) {
+        content += `Companion Text: ${poll.companionText}\n`
+      }
+      if (poll.firstComment) {
+        content += `First Comment: ${poll.firstComment}\n`
+      }
+      content += `[${poll.pollType}]\n\n`
+    })
+    if (result.qualityReport) {
+      content += `\n\u{1F4CA} QUALITY REPORT\n`
+      content += `Score: ${result.qualityReport.overallScore}/10\n`
+      content += `Engagement: ${result.qualityReport.engagementPrediction}/10\n`
+    }
+    return content
+  }
+
   const handleGenerate = async () => {
     if (!canProceed()) return
 
@@ -342,7 +778,7 @@ function InkNewProjectWizard() {
     setError('')
 
     try {
-      const effectiveServiceType = isInstagram ? 'instagram' : state.contentType
+      const effectiveServiceType = isContentArchitect ? 'content-architect' : isInstagram ? 'instagram' : isTwitter ? `x-${state.xContentType}` : isLinkedIn ? `linkedin-${state.linkedinContentType}` : state.contentType
 
       // Create project
       const projectFormData = isInstagram
@@ -367,6 +803,45 @@ function InkNewProjectWizard() {
               referenceImageInstructions: state.referenceImageInstructions,
             },
           }
+        : isTwitter
+        ? {
+            topic: state.topic,
+            company: state.company,
+            audience: state.audience,
+            goals: state.goals,
+            platform: state.platform,
+            xContentType: state.xContentType,
+            tweetCount: state.tweetCount,
+            threadLength: state.threadLength,
+            quoteTweetCount: state.quoteTweetCount,
+            targetAccounts: state.targetAccounts,
+            sampleTweets: state.sampleTweets,
+          }
+        : isLinkedIn
+        ? {
+            topic: state.topic,
+            company: state.company,
+            audience: state.audience,
+            goals: state.goals,
+            platform: state.platform,
+            linkedinContentType: state.linkedinContentType,
+            postCount: state.postCount,
+            carouselCount: state.carouselCount,
+            articleCount: state.articleCount,
+            pollCount: state.pollCount,
+            sampleLinkedInPosts: state.sampleLinkedInPosts,
+          }
+        : isContentArchitect
+        ? {
+            description: state.caDescription,
+            industry: state.caIndustry,
+            companyName: state.caCompanyName,
+            goals: state.caGoals,
+            platforms: state.caPlatforms,
+            includeImages: state.caIncludeImages,
+            competitorUrls: state.caCompetitorUrls,
+            additionalContext: state.caAdditionalContext,
+          }
         : {
             topic: state.topic,
             company: state.company,
@@ -386,6 +861,7 @@ function InkNewProjectWizard() {
           formData: projectFormData,
           styleSelections: state.styleSelections,
           additionalInfo: state.additionalInfo,
+          companyProfileId: selectedProfileId || undefined,
         }),
       })
 
@@ -421,9 +897,10 @@ function InkNewProjectWizard() {
               tier: state.qualityTier,
               formData: {
                 company: state.company,
-                industry: state.goals || 'General',
+                industry: state.industry || 'General',
                 topic: state.topic,
                 audience: state.audience,
+                goals: state.goals,
                 goal: state.goals,
                 contentType: state.instagramContentType,
               },
@@ -481,6 +958,172 @@ function InkNewProjectWizard() {
             })
             mainContent += `-->\n`
           }
+        } else if (isTwitter) {
+          // Use X/Twitter-specific API
+          const xApiEndpoint = state.xContentType === 'tweets'
+            ? '/api/generate/x/tweets'
+            : state.xContentType === 'thread'
+            ? '/api/generate/x/threads'
+            : '/api/generate/x/quote-tweets'
+
+          const generateRes = await fetch(xApiEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tier: state.qualityTier,
+              formData: {
+                company: state.company,
+                industry: state.industry || 'General',
+                topic: state.topic,
+                audience: state.audience,
+                goals: state.goals,
+                tweetCount: state.tweetCount,
+                threadLength: state.threadLength,
+                quoteTweetCount: state.quoteTweetCount,
+                targetAccounts: state.targetAccounts ? state.targetAccounts.split(',').map(s => s.trim()) : [],
+                sampleTweets: state.sampleTweets,
+              },
+              styleSelections: {
+                ...state.styleSelections,
+                voice_learning: state.sampleTweets ? 'basic' : 'none',
+              },
+              additionalInfo: state.additionalInfo,
+            }),
+          })
+
+          result = await generateRes.json()
+          if (result.error) throw new Error(result.error)
+
+          // Format X/Twitter result based on content type
+          if (state.xContentType === 'tweets') {
+            const tweets = result.tweets || []
+            mainContent = `🐦 X TWEET PACK\n\n`
+            tweets.forEach((tweet: any, i: number) => {
+              mainContent += `--- Tweet ${i + 1} ---\n`
+              mainContent += `${tweet.text}\n`
+              mainContent += `[${tweet.characterCount} chars | ${tweet.contentType}]\n\n`
+            })
+            if (result.qualityReport) {
+              mainContent += `\n📊 QUALITY REPORT\n`
+              mainContent += `Score: ${result.qualityReport.overallScore}/10\n`
+              mainContent += `Shadowban Risk: ${result.qualityReport.shadowbanRisk}\n`
+            }
+          } else if (state.xContentType === 'thread') {
+            const thread = result.thread || []
+            mainContent = `🧵 X THREAD\n\n`
+            thread.forEach((tweet: any) => {
+              mainContent += `--- ${tweet.position}/${thread.length} ---\n`
+              mainContent += `${tweet.text}\n`
+              mainContent += `[${tweet.characterCount} chars | ${tweet.purpose}]\n\n`
+            })
+            if (result.hookVariations?.length > 0) {
+              mainContent += `\n🎣 HOOK VARIATIONS\n`
+              result.hookVariations.forEach((hook: string, i: number) => {
+                mainContent += `${i + 1}. ${hook}\n`
+              })
+            }
+            if (result.qualityReport) {
+              mainContent += `\n📊 QUALITY REPORT\n`
+              mainContent += `Overall: ${result.qualityReport.overallScore}/10\n`
+              mainContent += `Hook: ${result.qualityReport.hookScore}/10\n`
+              mainContent += `Flow: ${result.qualityReport.flowScore}/10\n`
+            }
+          } else {
+            // Quote tweets
+            const quotes = result.quoteTweets || []
+            mainContent = `💬 X QUOTE TWEETS\n\n`
+            quotes.forEach((qt: any, i: number) => {
+              mainContent += `--- Quote ${i + 1} ---\n`
+              mainContent += `Target: ${qt.targetContext}\n`
+              mainContent += `Response: ${qt.responseText}\n`
+              mainContent += `[${qt.characterCount} chars | ${qt.quoteType}]\n\n`
+            })
+            if (result.qualityReport) {
+              mainContent += `\n📊 QUALITY REPORT\n`
+              mainContent += `Overall: ${result.qualityReport.overallScore}/10\n`
+              mainContent += `Authenticity: ${result.qualityReport.authenticityScore}/10\n`
+              mainContent += `Value Add: ${result.qualityReport.valueAddScore}/10\n`
+            }
+          }
+        } else if (isLinkedIn) {
+          // Use LinkedIn-specific API
+          const linkedinApiEndpoint = state.linkedinContentType === 'text-posts'
+            ? '/api/generate/linkedin/text-posts'
+            : state.linkedinContentType === 'carousel'
+            ? '/api/generate/linkedin/carousels'
+            : state.linkedinContentType === 'article'
+            ? '/api/generate/linkedin/articles'
+            : '/api/generate/linkedin/polls'
+
+          const generateRes = await fetch(linkedinApiEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tier: state.qualityTier,
+              formData: {
+                company: state.company,
+                industry: state.industry || 'General',
+                topic: state.topic,
+                audience: state.audience,
+                goals: state.goals,
+                postCount: state.postCount,
+                carouselCount: state.carouselCount,
+                articleCount: state.articleCount,
+                pollCount: state.pollCount,
+                sampleLinkedInPosts: state.sampleLinkedInPosts,
+              },
+              styleSelections: {
+                ...state.styleSelections,
+                voice_learning: state.sampleLinkedInPosts ? 'basic' : 'none',
+              },
+              additionalInfo: state.additionalInfo,
+            }),
+          })
+
+          result = await generateRes.json()
+          if (result.error) throw new Error(result.error)
+
+          // Format LinkedIn result based on content type
+          if (state.linkedinContentType === 'text-posts') {
+            mainContent = formatLinkedInTextPosts(result)
+          } else if (state.linkedinContentType === 'carousel') {
+            mainContent = formatLinkedInCarousels(result)
+          } else if (state.linkedinContentType === 'article') {
+            mainContent = formatLinkedInArticles(result)
+          } else {
+            mainContent = formatLinkedInPolls(result)
+          }
+        } else if (isContentArchitect) {
+          // Use Content Architect API
+          const generateRes = await fetch('/api/generate/content-architect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              description: state.caDescription,
+              tier: state.qualityTier,
+              businessInfo: {
+                industry: state.caIndustry,
+                companyName: state.caCompanyName,
+              },
+              goals: state.caGoals,
+              platforms: state.caPlatforms,
+              includeImages: state.caIncludeImages,
+              competitorUrls: state.caCompetitorUrls
+                .split('\n')
+                .map(url => url.trim())
+                .filter(url => url),
+              additionalContext: state.caAdditionalContext,
+            }),
+          })
+
+          result = await generateRes.json()
+          if (result.error) throw new Error(result.error)
+
+          mainContent = result.formattedOutput || ''
+          // Store structured data for Content Launchpad
+          if (result.data) {
+            (result as any)._structuredData = result.data
+          }
         } else {
           // Use standard generate API
           const generateRes = await fetch('/api/generate', {
@@ -514,6 +1157,7 @@ function InkNewProjectWizard() {
             result: mainContent,
             wordCount: mainContent.split(/\s+/).length,
             completedAt: new Date().toISOString(),
+            ...((result as any)._structuredData && { structuredData: (result as any)._structuredData }),
           }),
         })
 
@@ -538,7 +1182,7 @@ function InkNewProjectWizard() {
         isGenerating={generation.isGenerating}
         progress={generation.progress}
         title={state.projectName}
-        contentType={isInstagram ? 'instagram' : isBlogPost ? 'blog' : 'social'}
+        contentType={isContentArchitect ? 'content-architect' : isInstagram ? 'instagram' : isTwitter ? 'twitter' : isLinkedIn ? 'linkedin' : isBlogPost ? 'blog' : 'social'}
         error={generation.error}
         onCancel={() => {
           generation.cancelGeneration()
@@ -583,9 +1227,11 @@ function InkNewProjectWizard() {
           >
             {stepId === 'type' && 'What shall we create?'}
             {stepId === 'platform' && 'Choose your platform'}
-            {stepId === 'details' && 'Tell us about your content'}
+            {stepId === 'details' && (isContentArchitect ? 'Describe your strategy needs' : 'Tell us about your content')}
             {stepId === 'style' && 'Define your voice'}
             {stepId === 'images' && 'Visual direction'}
+            {stepId === 'x-options' && 'Configure your X content'}
+            {stepId === 'linkedin-options' && 'Configure your LinkedIn content'}
             {stepId === 'quality' && 'Choose your tier'}
           </h1>
         </header>
@@ -696,24 +1342,13 @@ function InkNewProjectWizard() {
                 {socialPlatforms.map((platform) => (
                   <button
                     key={platform.id}
-                    onClick={() => !platform.comingSoon && updateState('platform', platform.id)}
-                    disabled={platform.comingSoon}
+                    onClick={() => updateState('platform', platform.id)}
                     className="relative text-left p-5 rounded-xl transition-all"
                     style={{
                       background: state.platform === platform.id ? tokens.colors.paper.white : tokens.colors.paper.warm,
                       border: `2px solid ${state.platform === platform.id ? tokens.colors.ink[700] : 'transparent'}`,
-                      opacity: platform.comingSoon ? 0.5 : 1,
-                      cursor: platform.comingSoon ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    {platform.comingSoon && (
-                      <span
-                        className="absolute top-2 right-2 px-2 py-1 text-xs rounded-full"
-                        style={{ background: tokens.colors.paper.border, color: tokens.colors.text.muted, fontFamily: tokens.fonts.sans }}
-                      >
-                        Coming Soon
-                      </span>
-                    )}
                     <div
                       className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
                       style={{
@@ -778,108 +1413,459 @@ function InkNewProjectWizard() {
                   </div>
                 </div>
               )}
+
+              {/* X/Twitter content type */}
+              {state.platform === 'twitter' && (
+                <div className="pt-6 border-t" style={{ borderColor: tokens.colors.paper.border }}>
+                  <label className="block text-sm font-medium mb-3" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                    Content Type
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {xContentTypes.map((ct) => (
+                      <button
+                        key={ct.id}
+                        onClick={() => updateState('xContentType', ct.id)}
+                        className="relative p-4 rounded-xl text-center transition-all"
+                        style={{
+                          background: state.xContentType === ct.id ? tokens.colors.paper.white : tokens.colors.paper.warm,
+                          border: `2px solid ${state.xContentType === ct.id ? tokens.colors.ink[700] : 'transparent'}`,
+                        }}
+                      >
+                        {ct.recommended && (
+                          <span
+                            className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 text-xs font-medium rounded-full"
+                            style={{ background: tokens.colors.sage[500], color: '#fff' }}
+                          >
+                            Best
+                          </span>
+                        )}
+                        <h4 className="font-medium text-sm" style={{ color: tokens.colors.text.primary, fontFamily: tokens.fonts.sans }}>
+                          {ct.name}
+                        </h4>
+                        <p className="text-xs mt-1" style={{ color: tokens.colors.text.muted }}>{ct.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* LinkedIn content type */}
+              {state.platform === 'linkedin' && (
+                <div className="pt-6 border-t" style={{ borderColor: tokens.colors.paper.border }}>
+                  <label className="block text-sm font-medium mb-3" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                    Content Type
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {linkedinContentTypes.map((ct) => (
+                      <button
+                        key={ct.id}
+                        onClick={() => updateState('linkedinContentType', ct.id)}
+                        className="relative p-4 rounded-xl text-center transition-all"
+                        style={{
+                          background: state.linkedinContentType === ct.id ? tokens.colors.paper.white : tokens.colors.paper.warm,
+                          border: `2px solid ${state.linkedinContentType === ct.id ? tokens.colors.ink[700] : 'transparent'}`,
+                        }}
+                      >
+                        {ct.recommended && (
+                          <span
+                            className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 text-xs font-medium rounded-full"
+                            style={{ background: tokens.colors.sage[500], color: '#fff' }}
+                          >
+                            Best
+                          </span>
+                        )}
+                        <h4 className="font-medium text-sm" style={{ color: tokens.colors.text.primary, fontFamily: tokens.fonts.sans }}>
+                          {ct.name}
+                        </h4>
+                        <p className="text-xs mt-1" style={{ color: tokens.colors.text.muted }}>{ct.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* STEP: Details */}
           {stepId === 'details' && (
             <div className="space-y-6">
-              {/* Basic fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
-                    Topic / Title <span style={{ color: tokens.colors.ink[500] }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., The Future of Remote Work"
-                    value={state.topic}
-                    onChange={(e) => updateState('topic', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl outline-none"
-                    style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
-                    Company / Brand <span style={{ color: tokens.colors.ink[500] }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Acme Corporation"
-                    value={state.company}
-                    onChange={(e) => updateState('company', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl outline-none"
-                    style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
-                    Target Audience <span style={{ color: tokens.colors.ink[500] }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Marketing managers aged 30-45"
-                    value={state.audience}
-                    onChange={(e) => updateState('audience', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl outline-none"
-                    style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
-                    Goals (optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Generate leads for trial signups"
-                    value={state.goals}
-                    onChange={(e) => updateState('goals', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl outline-none"
-                    style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
-                  />
-                </div>
-              </div>
-
-              {/* Sample articles */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
-                  Sample Articles for Style Matching (optional)
-                </label>
+              {/* Pre-filled from Strategy banner */}
+              {sourceLoaded && sourceProjectId && (
                 <div
-                  className="p-3 rounded-lg mb-2"
-                  style={{ background: tokens.colors.sage[50], border: `1px solid ${tokens.colors.sage[200]}` }}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
+                  style={{
+                    background: tokens.colors.sage[50],
+                    border: `1px solid ${tokens.colors.sage[200]}`,
+                    color: tokens.colors.sage[900],
+                    fontFamily: tokens.fonts.sans,
+                  }}
                 >
-                  <p className="text-xs" style={{ color: tokens.colors.sage[700], fontFamily: tokens.fonts.sans }}>
-                    We analyze: tone, formality, sentence patterns, vocabulary
-                  </p>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                  </svg>
+                  <span>
+                    <strong>Pre-filled from your strategy report.</strong> Feel free to edit any field below.
+                  </span>
                 </div>
-                <textarea
-                  placeholder="Paste 1-5 sample articles to match your voice..."
-                  value={state.sampleArticles}
-                  onChange={(e) => updateState('sampleArticles', e.target.value)}
-                  rows={4}
-                  className="w-full px-4 py-3 rounded-xl outline-none resize-none"
-                  style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
-                />
-              </div>
+              )}
 
-              {/* Additional info */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
-                  Additional Information (optional)
-                </label>
-                <textarea
-                  placeholder="Links, facts, requirements, special requests..."
-                  value={state.additionalInfo}
-                  onChange={(e) => updateState('additionalInfo', e.target.value)}
-                  rows={3}
-                  className="w-full px-4 py-3 rounded-xl outline-none resize-none"
-                  style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
-                />
-              </div>
+              {/* Profile Selector Pills */}
+              {profiles.length > 0 && (
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-3"
+                    style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}
+                  >
+                    Company Profile
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={clearProfile}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm transition-all"
+                      style={{
+                        background: !selectedProfileId ? tokens.colors.ink[700] : tokens.colors.paper.warm,
+                        color: !selectedProfileId ? '#fff' : tokens.colors.text.secondary,
+                        border: `1px solid ${!selectedProfileId ? tokens.colors.ink[700] : tokens.colors.paper.border}`,
+                        fontFamily: tokens.fonts.sans,
+                      }}
+                    >
+                      Start Fresh
+                    </button>
+                    {profiles.map((profile) => (
+                      <button
+                        key={profile.id}
+                        onClick={() => applyProfile(profile)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm transition-all"
+                        style={{
+                          background: selectedProfileId === profile.id ? tokens.colors.ink[700] : tokens.colors.paper.warm,
+                          color: selectedProfileId === profile.id ? '#fff' : tokens.colors.text.secondary,
+                          border: `1px solid ${selectedProfileId === profile.id ? tokens.colors.ink[700] : tokens.colors.paper.border}`,
+                          fontFamily: tokens.fonts.sans,
+                        }}
+                      >
+                        {profile.isDefault && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                          </svg>
+                        )}
+                        {selectedProfileId === profile.id && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        )}
+                        {profile.companyName}
+                      </button>
+                    ))}
+                    <a
+                      href="/dashboard/profiles"
+                      className="flex items-center gap-1 px-3 py-2 rounded-full text-sm transition-all"
+                      style={{
+                        background: 'transparent',
+                        color: tokens.colors.text.subtle,
+                        border: `1px dashed ${tokens.colors.paper.border}`,
+                        fontFamily: tokens.fonts.sans,
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 4v16m8-8H4" />
+                      </svg>
+                      New
+                    </a>
+                  </div>
+                  {selectedProfileId && (
+                    <p className="text-xs mt-2" style={{ color: tokens.colors.sage[600], fontFamily: tokens.fonts.sans }}>
+                      Fields auto-filled from profile. Edit any field to override.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {isContentArchitect ? (
+                <>
+                  {/* Content Architect form */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                      Describe Your Content Needs <span style={{ color: tokens.colors.ink[500] }}>*</span>
+                    </label>
+                    <textarea
+                      value={state.caDescription}
+                      onChange={(e) => updateState('caDescription', e.target.value)}
+                      placeholder="Tell us about your business, what you're trying to achieve, and what kind of content you need. The more detail you provide, the better recommendations you'll receive."
+                      rows={4}
+                      className="w-full px-4 py-3 rounded-xl outline-none resize-none"
+                      style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                    />
+                    <p className="text-xs mt-2" style={{ color: tokens.colors.text.muted, fontFamily: tokens.fonts.sans }}>
+                      Minimum 10 characters. Example: &quot;We&apos;re a B2B SaaS startup in the HR tech space. We want to establish thought leadership and generate leads.&quot;
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                        Company Name
+                        {profileFieldsApplied.has('company') && (
+                          <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ background: tokens.colors.sage[50], color: tokens.colors.sage[700] }}>From profile</span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Your company name"
+                        value={state.caCompanyName}
+                        onChange={(e) => updateState('caCompanyName', e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl outline-none"
+                        style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                        Industry
+                        {profileFieldsApplied.has('caIndustry') && (
+                          <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ background: tokens.colors.sage[50], color: tokens.colors.sage[700] }}>From profile</span>
+                        )}
+                      </label>
+                      <select
+                        value={state.caIndustry}
+                        onChange={(e) => updateState('caIndustry', e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl outline-none"
+                        style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                      >
+                        <option value="">Select industry...</option>
+                        {caIndustries.map((ind) => (
+                          <option key={ind.value} value={ind.value}>{ind.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Goals multi-select */}
+                  <div>
+                    <label className="block text-sm font-medium mb-3" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                      Content Goals
+                    </label>
+                    <p className="text-xs mb-3" style={{ color: tokens.colors.text.muted, fontFamily: tokens.fonts.sans }}>
+                      Select all that apply
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {caGoals.map((goal) => (
+                        <button
+                          key={goal.value}
+                          onClick={() => {
+                            const current = state.caGoals
+                            updateState('caGoals', current.includes(goal.value)
+                              ? current.filter(g => g !== goal.value)
+                              : [...current, goal.value]
+                            )
+                          }}
+                          className="px-4 py-2 rounded-full transition-all text-sm"
+                          style={{
+                            background: state.caGoals.includes(goal.value) ? tokens.colors.ink[700] : tokens.colors.paper.warm,
+                            color: state.caGoals.includes(goal.value) ? '#fff' : tokens.colors.text.primary,
+                            border: `1px solid ${state.caGoals.includes(goal.value) ? tokens.colors.ink[700] : tokens.colors.paper.border}`,
+                            fontFamily: tokens.fonts.sans,
+                          }}
+                        >
+                          {goal.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Platforms multi-select */}
+                  <div>
+                    <label className="block text-sm font-medium mb-3" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                      Target Platforms
+                    </label>
+                    <p className="text-xs mb-3" style={{ color: tokens.colors.text.muted, fontFamily: tokens.fonts.sans }}>
+                      Where do you want to publish content?
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {caPlatforms.map((platform) => (
+                        <button
+                          key={platform.value}
+                          onClick={() => {
+                            const current = state.caPlatforms
+                            updateState('caPlatforms', current.includes(platform.value)
+                              ? current.filter(p => p !== platform.value)
+                              : [...current, platform.value]
+                            )
+                          }}
+                          className="p-3 rounded-xl transition-all flex items-center gap-2 text-sm"
+                          style={{
+                            background: state.caPlatforms.includes(platform.value) ? tokens.colors.ink[700] : tokens.colors.paper.warm,
+                            color: state.caPlatforms.includes(platform.value) ? '#fff' : tokens.colors.text.primary,
+                            border: `1px solid ${state.caPlatforms.includes(platform.value) ? tokens.colors.ink[700] : tokens.colors.paper.border}`,
+                            fontFamily: tokens.fonts.sans,
+                          }}
+                        >
+                          <span>{platform.icon}</span>
+                          <span>{platform.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Include Images toggle */}
+                  <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: tokens.colors.paper.warm }}>
+                    <div>
+                      <p className="font-medium" style={{ color: tokens.colors.text.primary, fontFamily: tokens.fonts.sans }}>
+                        Include Image Recommendations
+                      </p>
+                      <p className="text-sm" style={{ color: tokens.colors.text.muted, fontFamily: tokens.fonts.sans }}>
+                        Get suggestions for AI image generation
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => updateState('caIncludeImages', !state.caIncludeImages)}
+                      className="relative w-12 h-6 rounded-full transition-colors"
+                      style={{ background: state.caIncludeImages ? tokens.colors.ink[700] : tokens.colors.paper.border }}
+                    >
+                      <span
+                        className="absolute top-1 w-4 h-4 rounded-full bg-white transition-transform"
+                        style={{ left: state.caIncludeImages ? '26px' : '4px' }}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Competitor URLs */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                      Competitor URLs (optional)
+                    </label>
+                    <textarea
+                      value={state.caCompetitorUrls}
+                      onChange={(e) => updateState('caCompetitorUrls', e.target.value)}
+                      placeholder="Enter competitor websites (one per line) for competitive analysis"
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-xl outline-none resize-none"
+                      style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                    />
+                  </div>
+
+                  {/* Additional Context */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                      Additional Context (optional)
+                    </label>
+                    <textarea
+                      value={state.caAdditionalContext}
+                      onChange={(e) => updateState('caAdditionalContext', e.target.value)}
+                      placeholder="Any other information that might help us provide better recommendations..."
+                      rows={2}
+                      className="w-full px-4 py-3 rounded-xl outline-none resize-none"
+                      style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Standard form fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                        Topic / Title <span style={{ color: tokens.colors.ink[500] }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g., The Future of Remote Work"
+                        value={state.topic}
+                        onChange={(e) => updateState('topic', e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl outline-none"
+                        style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                        Company / Brand <span style={{ color: tokens.colors.ink[500] }}>*</span>
+                        {profileFieldsApplied.has('company') && (
+                          <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ background: tokens.colors.sage[50], color: tokens.colors.sage[700] }}>From profile</span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Acme Corporation"
+                        value={state.company}
+                        onChange={(e) => updateState('company', e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl outline-none"
+                        style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                        Target Audience <span style={{ color: tokens.colors.ink[500] }}>*</span>
+                        {profileFieldsApplied.has('audience') && (
+                          <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ background: tokens.colors.sage[50], color: tokens.colors.sage[700] }}>From profile</span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Marketing managers aged 30-45"
+                        value={state.audience}
+                        onChange={(e) => updateState('audience', e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl outline-none"
+                        style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                        Goals (optional)
+                        {profileFieldsApplied.has('goals') && (
+                          <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ background: tokens.colors.sage[50], color: tokens.colors.sage[700] }}>From profile</span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Generate leads for trial signups"
+                        value={state.goals}
+                        onChange={(e) => updateState('goals', e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl outline-none"
+                        style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sample articles */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                      Sample Articles for Style Matching (optional)
+                    </label>
+                    <div
+                      className="p-3 rounded-lg mb-2"
+                      style={{ background: tokens.colors.sage[50], border: `1px solid ${tokens.colors.sage[200]}` }}
+                    >
+                      <p className="text-xs" style={{ color: tokens.colors.sage[700], fontFamily: tokens.fonts.sans }}>
+                        We analyze: tone, formality, sentence patterns, vocabulary
+                      </p>
+                    </div>
+                    <textarea
+                      placeholder="Paste 1-5 sample articles to match your voice..."
+                      value={state.sampleArticles}
+                      onChange={(e) => updateState('sampleArticles', e.target.value)}
+                      rows={4}
+                      className="w-full px-4 py-3 rounded-xl outline-none resize-none"
+                      style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                    />
+                  </div>
+
+                  {/* Additional info */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                      Additional Information (optional)
+                    </label>
+                    <textarea
+                      placeholder="Links, facts, requirements, special requests..."
+                      value={state.additionalInfo}
+                      onChange={(e) => updateState('additionalInfo', e.target.value)}
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-xl outline-none resize-none"
+                      style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -903,7 +1889,7 @@ function InkNewProjectWizard() {
                 </button>
               </div>
 
-              {showAdvancedStyles ? (
+              {(showAdvancedStyles || Object.keys(state.styleSelections).length > 0) ? (
                 <InkStyleSelector
                   selections={state.styleSelections}
                   onChange={(selections) => updateState('styleSelections', selections)}
@@ -1219,6 +2205,328 @@ function InkNewProjectWizard() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* STEP: X/Twitter Options */}
+          {stepId === 'x-options' && (
+            <div className="space-y-6">
+              {/* Tweet Pack options */}
+              {state.xContentType === 'tweets' && (
+                <div>
+                  <label className="block text-sm font-medium mb-3" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                    Number of Tweets
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[7, 14, 30, 60].map((count) => (
+                      <button
+                        key={count}
+                        onClick={() => updateState('tweetCount', count)}
+                        className="px-6 py-3 rounded-xl text-center transition-all"
+                        style={{
+                          background: state.tweetCount === count ? tokens.colors.ink[700] : tokens.colors.paper.warm,
+                          color: state.tweetCount === count ? '#fff' : tokens.colors.text.primary,
+                          fontFamily: tokens.fonts.sans,
+                        }}
+                      >
+                        {count} tweets
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Thread options */}
+              {state.xContentType === 'thread' && (
+                <div>
+                  <label className="block text-sm font-medium mb-3" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                    Thread Length
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { value: 4, label: 'Mini (3-4)', hint: 'Quick insights' },
+                      { value: 7, label: 'Standard (5-7)', hint: 'Most popular' },
+                      { value: 10, label: 'Deep (8-10)', hint: 'In-depth topic' },
+                      { value: 15, label: 'Ultimate (11-15)', hint: 'Comprehensive guide' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => updateState('threadLength', opt.value)}
+                        className="relative px-5 py-3 rounded-xl text-center transition-all"
+                        style={{
+                          background: state.threadLength === opt.value ? tokens.colors.ink[700] : tokens.colors.paper.warm,
+                          color: state.threadLength === opt.value ? '#fff' : tokens.colors.text.primary,
+                          fontFamily: tokens.fonts.sans,
+                        }}
+                      >
+                        {opt.value === 7 && (
+                          <span
+                            className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 text-xs font-medium rounded-full"
+                            style={{ background: tokens.colors.sage[500], color: '#fff' }}
+                          >
+                            Best
+                          </span>
+                        )}
+                        <div className="font-medium">{opt.label}</div>
+                        <div className="text-xs opacity-70">{opt.hint}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quote Tweet options */}
+              {state.xContentType === 'quote-tweets' && (
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium mb-3" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                      Number of Quote Tweets
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {[10, 20, 30].map((count) => (
+                        <button
+                          key={count}
+                          onClick={() => updateState('quoteTweetCount', count)}
+                          className="px-6 py-3 rounded-xl text-center transition-all"
+                          style={{
+                            background: state.quoteTweetCount === count ? tokens.colors.ink[700] : tokens.colors.paper.warm,
+                            color: state.quoteTweetCount === count ? '#fff' : tokens.colors.text.primary,
+                            fontFamily: tokens.fonts.sans,
+                          }}
+                        >
+                          {count} quotes
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                      Target Accounts (optional)
+                    </label>
+                    <p className="text-xs mb-2" style={{ color: tokens.colors.text.muted, fontFamily: tokens.fonts.sans }}>
+                      Accounts you want to engage with. AI will create strategic responses.
+                    </p>
+                    <input
+                      type="text"
+                      placeholder="e.g., @paulg, @naval, @sama"
+                      value={state.targetAccounts}
+                      onChange={(e) => updateState('targetAccounts', e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl outline-none"
+                      style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Voice Learning Section */}
+              <div className="pt-6 border-t" style={{ borderColor: tokens.colors.paper.border }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: tokens.colors.ink[50] }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={tokens.colors.ink[600]} strokeWidth="1.5">
+                      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="22" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium" style={{ color: tokens.colors.text.primary, fontFamily: tokens.fonts.sans }}>
+                      Voice Learning
+                    </p>
+                    <p className="text-xs" style={{ color: tokens.colors.text.muted, fontFamily: tokens.fonts.sans }}>
+                      Paste your best tweets so AI can match your voice
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  className="p-4 rounded-xl mb-4"
+                  style={{ background: tokens.colors.sage[50], border: `1px solid ${tokens.colors.sage[100]}` }}
+                >
+                  <p className="text-sm mb-2" style={{ color: tokens.colors.sage[700], fontFamily: tokens.fonts.sans }}>
+                    For best results, include 5-20 of your top-performing tweets:
+                  </p>
+                  <ul className="text-xs space-y-1" style={{ color: tokens.colors.sage[600], fontFamily: tokens.fonts.sans }}>
+                    <li>• Your most engaging/viral tweets</li>
+                    <li>• Tweets that got lots of replies</li>
+                    <li>• Examples of your signature style</li>
+                  </ul>
+                </div>
+
+                <textarea
+                  value={state.sampleTweets}
+                  onChange={(e) => updateState('sampleTweets', e.target.value)}
+                  placeholder="Paste your sample tweets here, one per line or separated by blank lines..."
+                  rows={5}
+                  className="w-full px-4 py-3 rounded-xl outline-none resize-none"
+                  style={{
+                    background: tokens.colors.paper.warm,
+                    border: `1px solid ${tokens.colors.paper.border}`,
+                    fontFamily: tokens.fonts.sans,
+                    color: tokens.colors.text.primary,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* STEP: LinkedIn Options */}
+          {stepId === 'linkedin-options' && (
+            <div className="space-y-6">
+              {/* Text Posts options */}
+              {state.linkedinContentType === 'text-posts' && (
+                <div>
+                  <label className="block text-sm font-medium mb-3" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                    Number of Posts
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[5, 10, 15, 30].map((count) => (
+                      <button
+                        key={count}
+                        onClick={() => updateState('postCount', count)}
+                        className="px-6 py-3 rounded-xl text-center transition-all"
+                        style={{
+                          background: state.postCount === count ? tokens.colors.ink[700] : tokens.colors.paper.warm,
+                          color: state.postCount === count ? '#fff' : tokens.colors.text.primary,
+                          fontFamily: tokens.fonts.sans,
+                        }}
+                      >
+                        {count} posts
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Carousel options */}
+              {state.linkedinContentType === 'carousel' && (
+                <div>
+                  <label className="block text-sm font-medium mb-3" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                    Number of Carousels
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[1, 2, 3, 5].map((count) => (
+                      <button
+                        key={count}
+                        onClick={() => updateState('carouselCount', count)}
+                        className="px-6 py-3 rounded-xl text-center transition-all"
+                        style={{
+                          background: state.carouselCount === count ? tokens.colors.ink[700] : tokens.colors.paper.warm,
+                          color: state.carouselCount === count ? '#fff' : tokens.colors.text.primary,
+                          fontFamily: tokens.fonts.sans,
+                        }}
+                      >
+                        {count} {count === 1 ? 'carousel' : 'carousels'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Article options */}
+              {state.linkedinContentType === 'article' && (
+                <div>
+                  <label className="block text-sm font-medium mb-3" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                    Number of Articles
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[1, 2, 3].map((count) => (
+                      <button
+                        key={count}
+                        onClick={() => updateState('articleCount', count)}
+                        className="px-6 py-3 rounded-xl text-center transition-all"
+                        style={{
+                          background: state.articleCount === count ? tokens.colors.ink[700] : tokens.colors.paper.warm,
+                          color: state.articleCount === count ? '#fff' : tokens.colors.text.primary,
+                          fontFamily: tokens.fonts.sans,
+                        }}
+                      >
+                        {count} {count === 1 ? 'article' : 'articles'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Poll options */}
+              {state.linkedinContentType === 'poll' && (
+                <div>
+                  <label className="block text-sm font-medium mb-3" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                    Number of Polls
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[3, 5, 10].map((count) => (
+                      <button
+                        key={count}
+                        onClick={() => updateState('pollCount', count)}
+                        className="px-6 py-3 rounded-xl text-center transition-all"
+                        style={{
+                          background: state.pollCount === count ? tokens.colors.ink[700] : tokens.colors.paper.warm,
+                          color: state.pollCount === count ? '#fff' : tokens.colors.text.primary,
+                          fontFamily: tokens.fonts.sans,
+                        }}
+                      >
+                        {count} polls
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Voice Learning Section */}
+              <div className="pt-6 border-t" style={{ borderColor: tokens.colors.paper.border }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: '#E8F0FE' }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A66C2" strokeWidth="1.5">
+                      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="22" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium" style={{ color: tokens.colors.text.primary, fontFamily: tokens.fonts.sans }}>
+                      Voice Learning
+                    </p>
+                    <p className="text-xs" style={{ color: tokens.colors.text.muted, fontFamily: tokens.fonts.sans }}>
+                      Paste your best LinkedIn posts so AI can match your voice
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  className="p-4 rounded-xl mb-4"
+                  style={{ background: tokens.colors.sage[50], border: `1px solid ${tokens.colors.sage[100]}` }}
+                >
+                  <p className="text-sm mb-2" style={{ color: tokens.colors.sage[700], fontFamily: tokens.fonts.sans }}>
+                    For best results, include 5-20 of your top-performing posts:
+                  </p>
+                  <ul className="text-xs space-y-1" style={{ color: tokens.colors.sage[600], fontFamily: tokens.fonts.sans }}>
+                    <li>• Posts with high engagement (comments, reactions)</li>
+                    <li>• Content that reflects your professional voice</li>
+                    <li>• Examples of your signature style</li>
+                  </ul>
+                </div>
+
+                <textarea
+                  value={state.sampleLinkedInPosts}
+                  onChange={(e) => updateState('sampleLinkedInPosts', e.target.value)}
+                  placeholder="Paste your sample LinkedIn posts here, one per section separated by blank lines..."
+                  rows={5}
+                  className="w-full px-4 py-3 rounded-xl outline-none resize-none"
+                  style={{
+                    background: tokens.colors.paper.warm,
+                    border: `1px solid ${tokens.colors.paper.border}`,
+                    fontFamily: tokens.fonts.sans,
+                    color: tokens.colors.text.primary,
+                  }}
+                />
+              </div>
             </div>
           )}
 

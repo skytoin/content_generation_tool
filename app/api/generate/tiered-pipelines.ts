@@ -25,9 +25,14 @@ To ensure content reads as authentically human-written:
 - Never write more than 2 sentences of similar length in a row
 - Include rhetorical questions occasionally — they add natural rhythm
 - Vary paragraph lengths: some 1-2 sentences, others 4-5 sentences
+- Use contractions naturally (it's, don't, can't, you're) — humans almost always contract
+- Sentence fragments are fine. For rhythm. For emphasis.
+- Limit em dashes to 1-2 per article max — AI overuses them as a crutch
 
 ### 2. WORD CHOICE (Perplexity)
 - Avoid these overused AI transitions: "Furthermore", "Moreover", "In conclusion", "Additionally"
+- Always prefer the simpler word: "use" not "utilize", "help" not "facilitate", "start" not "embark", "show" not "showcase"
+- If a 12-year-old wouldn't say it in conversation, think twice
 - Use unexpected but natural word combinations
 - Include occasional colloquialisms appropriate to the style and audience
 
@@ -40,11 +45,36 @@ To ensure content reads as authentically human-written:
 - "At the end of the day..."
 - "Here's the thing..."
 - "First and foremost..."
+- "In an era where..."
+- "Serves as a testament..."
+- "Paving the way for..."
 
-### 4. AUTHENTICITY MARKERS
+### 4. WORDS TO NEVER USE (AI Vocabulary Tells)
+Replace with simpler alternatives:
+delve, tapestry, landscape (as metaphor), realm, leverage (as verb), utilize, harness,
+unlock, unleash, embark, foster, facilitate, streamline, orchestrate, showcase,
+elucidate, navigate (as metaphor), optimize, elevate, revolutionize, paradigm, synergy,
+holistic, robust, seamless, cutting-edge, groundbreaking, transformative, unprecedented,
+pivotal, plethora, myriad
+
+EXCEPTIONS — these override the banned words list:
+1. INDUSTRY TERMS: If a banned word is a genuine technical term for the customer's topic (e.g., "optimize" in SEO, "leverage" in finance), use it in its precise technical context — never as generic filler.
+2. CUSTOMER-SPECIFIED WORDS: If the customer explicitly requests specific words (SEO keywords, brand terms, must-include vocabulary), the customer's preference always takes priority. Include those words naturally. Never avoid or replace words the customer asked for.
+
+### 5. SHOW, DON'T TELL
+- Replace "many experts agree" with a named expert or specific source
+- Replace "in recent years" with an actual year
+- Replace "studies show" with a specific study or stat
+- Use specific numbers, names, and dates — never vague gestures at evidence
+
+### 6. AUTHENTICITY MARKERS
 - Include specific details that only someone knowledgeable would know
 - Reference real examples, not generic hypotheticals
-- Show genuine opinion where appropriate`
+- Show genuine opinion where appropriate
+- Acknowledge tradeoffs honestly — not everything is universally positive
+- Never announce structure ("First, I'll discuss X, then Y")
+- Skip broad "context-setting" openers — start with something specific
+- Leave in small imperfections: an aside, a fragment, an unusual word choice`
 
 const CRITIC_SYSTEM = `You are a merciless editor with extraordinarily high standards. Your role is to rigorously evaluate content against quality standards and style profile compliance.
 
@@ -60,7 +90,7 @@ const CRITIC_SYSTEM = `You are a merciless editor with extraordinarily high stan
 
 ### 3. Standard Quality Assessment
 - Specificity: facts, names, numbers vs vague claims
-- AI detection: any generic AI language patterns?
+- AI detection: scan for banned AI vocabulary (delve, leverage, utilize, harness, unlock, unleash, foster, facilitate, streamline, orchestrate, showcase, elevate, revolutionize, paradigm, synergy, holistic, robust, seamless, cutting-edge, groundbreaking, transformative, unprecedented, pivotal, plethora, myriad) and banned phrase patterns. Also check for: missing contractions, overused em dashes, vague evidence ("studies show", "many experts agree"). Any banned word = automatic FAIL unless (1) it is a genuine industry technical term, or (2) the customer explicitly requested that word as an SEO keyword or must-include item
 
 ## OUTPUT FORMAT
 

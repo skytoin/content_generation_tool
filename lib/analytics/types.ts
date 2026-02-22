@@ -13,6 +13,7 @@ export type AnalyticsTool =
   | 'spyfu'
   | 'sparktoro'
   | 'facebook-ad-library'
+  | 'dataforseo'
 
 export type ToolStatus = 'available' | 'unavailable' | 'error' | 'rate-limited'
 
@@ -175,6 +176,9 @@ export interface FacebookAdAnalysis {
   insights: string[]
 }
 
+// SEO Analysis Types (DataForSEO)
+export type { SEOAnalysisResult, KeywordData, CompetitorData, KeywordWarning } from '@/lib/dataforseo/seo-analyzer'
+
 // Aggregated Analytics Result
 export interface AggregatedAnalytics {
   timestamp: Date
@@ -186,6 +190,7 @@ export interface AggregatedAnalytics {
   competitors?: CompetitorAnalysis
   audience?: AudienceInsight
   adLibrary?: FacebookAdAnalysis
+  seoAnalysis?: import('@/lib/dataforseo/seo-analyzer').SEOAnalysisResult
   confidence: 'high' | 'medium' | 'low'
   summary: string
 }
