@@ -147,6 +147,7 @@ export interface ContentArchitectRequest {
   businessInfo?: {
     industry?: string
     companyName?: string
+    companyDescription?: string
     companySize?: string
     website?: string
   }
@@ -303,16 +304,25 @@ export async function runContentArchitectPipeline(
       const analyzedCompanyType = analysis.business_context?.company_type || ''
       const companyName = request.businessInfo?.companyName || ''
 
-      // Prefer AI-analyzed company type (e.g., "consultation and tax services") over
-      // literal company name (e.g., "New Business Set-Up Inc") which contains generic
-      // words that pollute seed keywords ("set-up" → "set up paypal business account")
+      // Build a concise topic for SEO seed keyword generation.
+      // Avoid long compounds like "MarTech AI content generation platform" which produce
+      // generic seeds ("content generation") that DataForSEO expands into unrelated keywords.
+      // If company_type is already descriptive (>2 words), use it alone instead of
+      // prepending industry, which just makes the topic longer and more diluted.
+      const companyTypeWords = analyzedCompanyType.split(/\s+/).filter((w: string) => w.length > 0)
       const analyticsTopic = analyzedIndustry
-        ? `${analyzedIndustry} ${analyzedCompanyType || 'services'}`.trim()
+        ? companyTypeWords.length > 2
+          ? analyzedCompanyType  // Already descriptive, e.g. "AI content generation platform"
+          : `${analyzedIndustry} ${analyzedCompanyType || 'services'}`.trim()
         : request.description.slice(0, 200)
 
       // Build keywords from AI analysis (industry, pain points, audience)
       // instead of naive word extraction from goal text
       const intelligentKeywords = buildAnalyticsKeywords(analysis, request)
+
+      // Generate AI-powered SEO seeds — these are customer search terms, not business jargon.
+      // Critical for no-website case; also supplements site-based keywords when website exists.
+      const seoSeeds = await generateSEOSeeds(analysis, request)
 
       const analyticsRequest: AnalyticsRequest = {
         topic: analyticsTopic,
@@ -322,9 +332,15 @@ export async function runContentArchitectPipeline(
         userTier: tier,
         industry: analyzedIndustry || request.businessInfo?.industry,
         companyName: request.businessInfo?.companyName,
+        companyType: analyzedCompanyType || undefined,
+        businessDescription: request.businessInfo?.companyDescription || request.description,
         userKeywords: intelligentKeywords,
         goals: request.goals?.join(', '),
+        targetUrl: request.businessInfo?.website || undefined,
+        seoSeeds,
       }
+
+      console.log(`[SEO] Target URL for keyword discovery: ${analyticsRequest.targetUrl || '(none - will use seed-based discovery)'}`)
 
       const analyticsResponse = await runAnalytics(analyticsRequest)
       analyticsData = analyticsResponse.data
@@ -448,7 +464,7 @@ export async function runContentArchitectPipeline(
 
   // Build SEO insights data
   const seoInsightsData = analyticsData?.seoAnalysis && analyticsData.seoAnalysis.dataSource === 'dataforseo' ? {
-    topKeywords: analyticsData.seoAnalysis.suggestedKeywords.slice(0, 15).map(k => ({
+    topKeywords: analyticsData.seoAnalysis.suggestedKeywords.slice(0, 20).map(k => ({
       keyword: k.keyword,
       volume: k.searchVolume,
       difficulty: k.difficulty,
@@ -519,7 +535,7 @@ export async function runContentArchitectPipeline(
 // HELPER FUNCTIONS
 // ============================================
 
-function buildAnalysisPrompt(request: ContentArchitectRequest): string {
+export function buildAnalysisPrompt(request: ContentArchitectRequest): string {
   let prompt = `Analyze this content request and extract structured information.\n\n`
   prompt += `## User's Description\n${request.description}\n\n`
 
@@ -547,11 +563,12 @@ function buildAnalysisPrompt(request: ContentArchitectRequest): string {
   return prompt
 }
 
-function buildFallbackAnalysis(request: ContentArchitectRequest): any {
+export function buildFallbackAnalysis(request: ContentArchitectRequest): any {
   return {
     business_context: {
       industry: request.businessInfo?.industry || 'General',
       company_type: request.businessInfo?.companySize || 'Small Business',
+      company_description: request.businessInfo?.companyDescription || '',
       primary_goals: request.goals || ['content creation'],
     },
     audience_profile: {
@@ -595,8 +612,31 @@ function buildAnalyticsKeywords(analysis: any, request: ContentArchitectRequest)
   if (bc.industry) addKeyword(bc.industry)
 
   // Industry + company type compound (e.g., "finance consultancy")
+  // Skip when company_type is already a long phrase (>3 words) to avoid
+  // diluted compounds like "MarTech AI content generation platform"
   if (bc.industry && bc.company_type && bc.company_type !== bc.industry) {
-    addKeyword(`${bc.industry} ${bc.company_type}`)
+    const typeWords = bc.company_type.split(/\s+/)
+    if (typeWords.length <= 3) {
+      addKeyword(`${bc.industry} ${bc.company_type}`)
+    } else {
+      // Long company_type: use it standalone (it's descriptive enough)
+      addKeyword(bc.company_type)
+    }
+  }
+
+  // Company description provides customer-facing context (e.g., "AI-powered tools for marketing teams")
+  if (bc.company_description || request.businessInfo?.companyDescription) {
+    const desc = (bc.company_description || request.businessInfo?.companyDescription || '').toLowerCase()
+    // Extract meaningful 2-3 word phrases from the description
+    const descWords = desc.replace(/[^\w\s-]/g, ' ').split(/\s+/).filter((w: string) => w.length > 3)
+    const noiseWords = new Set(['that', 'with', 'from', 'this', 'does', 'your', 'what', 'they', 'their', 'have', 'been', 'also', 'into', 'more', 'than', 'very', 'just', 'like', 'make', 'help', 'each', 'such', 'tool', 'tools', 'platform', 'software', 'system', 'solution', 'product', 'powered', 'based'])
+    const meaningful = descWords.filter((w: string) => !noiseWords.has(w))
+    // Add up to 2 two-word phrases from adjacent meaningful words
+    let added = 0
+    for (let i = 0; i < meaningful.length - 1 && added < 2; i++) {
+      addKeyword(`${meaningful[i]} ${meaningful[i + 1]}`)
+      added++
+    }
   }
 
   // Audience pain points (already extracted by the AI, e.g., "IRS audit", "tax planning")
@@ -629,6 +669,69 @@ function buildAnalyticsKeywords(analysis: any, request: ContentArchitectRequest)
   return keywords.slice(0, 10)
 }
 
+/**
+ * Generate SEO seed keywords using AI.
+ *
+ * The key insight: mechanical word extraction from business descriptions produces
+ * INTERNAL business jargon ("AI content generation platform", "MarTech").
+ * But SEO needs CUSTOMER search terms — what people actually type into Google
+ * ("ai writing tool", "ai blog writer", "content creation software").
+ *
+ * This function uses a lightweight LLM call to bridge that gap.
+ */
+async function generateSEOSeeds(
+  analysis: any,
+  request: ContentArchitectRequest
+): Promise<string[]> {
+  const industry = analysis.business_context?.industry || request.businessInfo?.industry || ''
+  const companyType = analysis.business_context?.company_type || ''
+  const companyDesc = request.businessInfo?.companyDescription || request.description
+  const painPoints = analysis.audience_profile?.pain_points || []
+
+  const desiredOutcomes = analysis.audience_profile?.desired_outcomes || []
+
+  const prompt = `Based on this business, generate 15 search terms (3-4 words each) that potential CUSTOMERS would type into Google to find products/services like this.
+
+Business: ${companyDesc}
+Industry: ${industry}
+What the business offers: ${companyType}
+Customer pain points: ${painPoints.slice(0, 3).join(', ')}
+Desired outcomes: ${desiredOutcomes.slice(0, 3).join(', ')}
+
+Rules:
+- Each term should be 3-4 words, like real Google searches
+- Focus on what CUSTOMERS search for, not internal business terminology
+- Do NOT include the company name
+- Do NOT include terms for DIFFERENT products/services even if they share similar words
+  (e.g., if the business creates content, do NOT include terms about content detection)
+- Do NOT include generic marketing terms like "digital marketing" unless that IS the product
+
+Include a mix of:
+- Problem-aware searches (people who have a problem this business solves)
+- Solution-aware searches (people looking for this type of product/service)
+- Comparison searches (people comparing options in this category)
+
+Return ONLY a JSON array of strings, no explanation.`
+
+  try {
+    const result = await callOpenAI(
+      OPENAI_MODELS.GPT_4O_MINI,
+      'You are an SEO keyword researcher. Return only valid JSON.',
+      prompt,
+      500
+    )
+    const jsonMatch = result.match(/\[[\s\S]*\]/)
+    if (jsonMatch) {
+      const seeds = JSON.parse(jsonMatch[0]) as string[]
+      console.log(`[SEO] AI-generated seeds: ${seeds.join(', ')}`)
+      return seeds.filter(s => typeof s === 'string' && s.length > 2).slice(0, 15)
+    }
+  } catch (error) {
+    console.warn('[SEO] Failed to generate AI seeds:', error)
+  }
+  return []
+}
+
 function buildStrategyPrompt(
   request: ContentArchitectRequest,
   analysis: any,
@@ -650,9 +753,10 @@ function buildStrategyPrompt(
       prompt += `## SEO Intelligence\n`
 
       if (seo.suggestedKeywords.length > 0) {
-        prompt += `### Keyword Opportunities (with volume, difficulty, actual clicks, intent)\n`
+        prompt += `### Keyword Opportunities (with volume, difficulty, intent)\n`
         for (const kw of seo.suggestedKeywords.slice(0, 10)) {
-          prompt += `- "${kw.keyword}" — Vol: ${kw.searchVolume}, Diff: ${kw.difficulty}, Clicks: ${kw.clicks}, Intent: ${kw.searchIntent}\n`
+          const clicksPart = kw.clicks > 0 ? `, Clicks: ${kw.clicks}` : ''
+          prompt += `- "${kw.keyword}" — Vol: ${kw.searchVolume}, Diff: ${kw.difficulty}${clicksPart}, Intent: ${kw.searchIntent}\n`
         }
         prompt += `\n`
       }
@@ -1074,7 +1178,8 @@ ${response.analyticsInsights.toolsUnavailable.length > 0
     if (seo.topKeywords.length > 0) {
       seoContent += `Keyword Opportunities:\n`
       for (const kw of seo.topKeywords) {
-        seoContent += `  ${kw.keyword} — Volume: ${kw.volume}, Difficulty: ${kw.difficulty}, Clicks: ${kw.clicks}, Intent: ${kw.intent}\n`
+        const hasClicks = kw.clicks > 0
+        seoContent += `  ${kw.keyword} — Volume: ${kw.volume}, Difficulty: ${kw.difficulty}${hasClicks ? `, Clicks: ${kw.clicks}` : ''}, Intent: ${kw.intent}\n`
       }
       seoContent += '\n'
     }

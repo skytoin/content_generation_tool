@@ -521,3 +521,167 @@ input:focus, textarea:focus, select:focus {
   60% { content: '..'; }
   80%, 100% { content: '...'; }
 }
+
+/* ========================================
+   BLOG PROSE STYLES - Ink Diffusion
+   ======================================== */
+
+@layer components {
+  .prose-ink {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: #2C2C2C;
+    font-size: 1.0625rem;
+    line-height: 1.49;
+  }
+
+  /* Responsive font sizing for wider container */
+  @media (min-width: 640px) {
+    .prose-ink {
+      font-size: 1.125rem;
+      line-height: 1.53;
+    }
+  }
+
+
+
+  .prose-ink h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 600;
+    font-size: 1.625rem;
+    color: #2C2C2C;
+    margin-top: 2.5rem;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.01em;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(114, 47, 55, 0.1);
+  }
+
+  @media (min-width: 640px) {
+    .prose-ink h2 {
+      font-size: 1.75rem;
+    }
+  }
+
+  .prose-ink h3 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 600;
+    font-size: 1.25rem;
+    color: #3a3a3a;
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  @media (min-width: 640px) {
+    .prose-ink h3 {
+      font-size: 1.375rem;
+    }
+  }
+
+  .prose-ink p {
+    margin-bottom: 0.75rem;
+  }
+
+  .prose-ink a {
+    color: #722F37;
+    text-decoration: underline;
+    text-decoration-color: rgba(114, 47, 55, 0.3);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    transition: text-decoration-color 0.2s, color 0.2s;
+  }
+
+  .prose-ink a:hover {
+    text-decoration-color: #722F37;
+  }
+
+  .prose-ink strong {
+    font-weight: 700;
+    color: #2C2C2C;
+  }
+
+  .prose-ink blockquote {
+    border-left: 3px solid #722F37;
+    padding: 0.75rem 1.25rem;
+    margin: 1.5rem 0;
+    font-style: italic;
+    color: #4a4a4a;
+    background: rgba(114, 47, 55, 0.03);
+    border-radius: 0 0.5rem 0.5rem 0;
+  }
+
+  .prose-ink blockquote p:last-child {
+    margin-bottom: 0;
+  }
+
+  .prose-ink ul,
+  .prose-ink ol {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+  }
+
+  .prose-ink ul {
+    list-style-type: disc;
+  }
+
+  .prose-ink ol {
+    list-style-type: decimal;
+  }
+
+  .prose-ink li {
+    margin-bottom: 0.1rem;
+    line-height: 1.4;
+  }
+
+  .prose-ink li > ul,
+  .prose-ink li > ol {
+    margin-top: 0.15rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .prose-ink code {
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    font-size: 0.85em;
+    background: rgba(114, 47, 55, 0.07);
+    color: #722F37;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.25rem;
+  }
+
+  .prose-ink pre {
+    background: #1e1e1e;
+    color: #FAF7F2;
+    padding: 1.25rem 1.5rem;
+    border-radius: 0.75rem;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .prose-ink pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  .prose-ink img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.75rem;
+    margin: 1.5rem 0;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+
+  .prose-ink hr {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #ddd5c9, transparent);
+    margin: 2.5rem 0;
+  }
+
+  .prose-ink s {
+    text-decoration: line-through;
+    opacity: 0.7;
+  }
+}

@@ -48,6 +48,8 @@ export {
   InkContentPreview,
   InkPricingConfigurator,
   InkAnalytics,
+  InkBlogIndex,
+  InkBlogPost,
 } from './pages'
 
 // Homepage

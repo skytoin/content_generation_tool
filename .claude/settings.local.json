@@ -21,7 +21,17 @@
       "mcp__playwright__browser_take_screenshot",
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_snapshot",
-      "mcp__playwright__browser_close"
+      "mcp__playwright__browser_close",
+      "WebSearch",
+      "WebFetch(domain:dataforseo.com)",
+      "WebFetch(domain:keywordseverywhere.com)",
+      "WebFetch(domain:www.semrush.com)",
+      "WebFetch(domain:minuttia.com)",
+      "mcp__serena__write_memory",
+      "mcp__filesystem__list_directory",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(ls:*)"
     ]
   }
 }

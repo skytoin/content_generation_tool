@@ -54,6 +54,7 @@ export function NavBar() {
             <a href="/#pricing" className="text-slate-600 hover:text-primary-600 transition-colors">Pricing</a>
             <a href="/#how-it-works" className="text-slate-600 hover:text-primary-600 transition-colors">How It Works</a>
             <a href="/#faq" className="text-slate-600 hover:text-primary-600 transition-colors">FAQ</a>
+            <Link href="/blog" className="text-slate-600 hover:text-primary-600 transition-colors">Blog</Link>
 
             <ThemeSwitcher />
 
@@ -131,6 +132,7 @@ export function NavBar() {
               <a href="/#pricing" className="block px-4 py-2 text-slate-600 hover:text-primary-600">Pricing</a>
               <a href="/#how-it-works" className="block px-4 py-2 text-slate-600 hover:text-primary-600">How It Works</a>
               <a href="/#faq" className="block px-4 py-2 text-slate-600 hover:text-primary-600">FAQ</a>
+              <Link href="/blog" className="block px-4 py-2 text-slate-600 hover:text-primary-600">Blog</Link>
 
               {/* Theme Switcher for mobile */}
               <div className="px-4 py-2 border-t border-slate-100 mt-2 pt-4">

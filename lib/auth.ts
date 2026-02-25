@@ -35,16 +35,22 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, account }) {
-      // Add user id to token on initial sign in
+      // Add user id and admin flag to token on initial sign in
       if (user) {
         token.id = user.id
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { isAdmin: true },
+        })
+        token.isAdmin = dbUser?.isAdmin ?? false
       }
       return token
     },
     async session({ session, token }) {
-      // Add user id to session
+      // Add user id and admin flag to session
       if (session.user && token.id) {
         session.user.id = token.id as string
+        session.user.isAdmin = token.isAdmin ?? false
       }
       return session
     },

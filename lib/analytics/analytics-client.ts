@@ -49,8 +49,12 @@ export interface AnalyticsRequest {
   userTier: 'budget' | 'standard' | 'premium'
   industry?: string
   companyName?: string
+  companyType?: string
+  businessDescription?: string
   userKeywords?: string[]
   goals?: string
+  targetUrl?: string
+  seoSeeds?: string[]
 }
 
 export interface AnalyticsResponse {
@@ -80,29 +84,30 @@ export async function runAnalytics(
     summary: '',
   }
 
-  // Run tools in parallel where possible
-  const tasks: Promise<void>[] = []
-
-  // Google Trends - always try if in available tools
+  // Phase 1: Run Google Trends first to extract rising queries as seeds for DataForSEO
+  let trendSeeds: string[] = []
   if (availableTools.includes('google-trends')) {
-    tasks.push(
-      (async () => {
-        try {
-          const trendsResult = await getTrendData(request.topic)
-          if (trendsResult.success && trendsResult.data) {
-            result.trends = trendsResult.data
-            toolsUsed.push('google-trends')
-          } else {
-            toolsUnavailable.push('google-trends')
-            warnings.push(`Google Trends: ${trendsResult.error || 'unavailable'}`)
-          }
-        } catch (error) {
-          toolsUnavailable.push('google-trends')
-          warnings.push(`Google Trends error: ${error}`)
+    try {
+      const trendsResult = await getTrendData(request.topic)
+      if (trendsResult.success && trendsResult.data) {
+        result.trends = trendsResult.data
+        toolsUsed.push('google-trends')
+        trendSeeds = extractTrendSeeds(trendsResult.data)
+        if (trendSeeds.length > 0) {
+          console.log(`[Analytics] Trend seeds injected: ${trendSeeds.length} queries`)
         }
-      })()
-    )
+      } else {
+        toolsUnavailable.push('google-trends')
+        warnings.push(`Google Trends: ${trendsResult.error || 'unavailable'}`)
+      }
+    } catch (error) {
+      toolsUnavailable.push('google-trends')
+      warnings.push(`Google Trends error: ${error}`)
+    }
   }
+
+  // Phase 2: Run remaining tools in parallel
+  const tasks: Promise<void>[] = []
 
   // PageSpeed - only if competitor URLs provided
   if (
@@ -198,6 +203,7 @@ export async function runAnalytics(
     tasks.push(
       (async () => {
         try {
+          const mergedSeoSeeds = [...(request.seoSeeds || []), ...trendSeeds]
           const seoRequest: SEOAnalysisRequest = {
             description: request.topic,
             industry: request.industry,
@@ -205,6 +211,10 @@ export async function runAnalytics(
             competitorUrls: request.competitorUrls,
             userKeywords: request.userKeywords || request.keywords,
             companyName: request.companyName,
+            companyType: request.companyType,
+            businessDescription: request.businessDescription,
+            targetUrl: request.targetUrl,
+            seoSeeds: mergedSeoSeeds.length > 0 ? mergedSeoSeeds : undefined,
           }
           const seoResult = await analyzeSEO(seoRequest)
           if (seoResult.dataSource === 'dataforseo') {
@@ -382,6 +392,21 @@ function formatNumber(num: number): string {
     return `${(num / 1000).toFixed(1)}K`
   }
   return num.toString()
+}
+
+/**
+ * Extract rising queries from Google Trends data to use as DataForSEO discovery seeds.
+ * Capped at 5 to avoid flooding the seed pool.
+ * @internal Exported for testing
+ */
+export function extractTrendSeeds(trends: GoogleTrendsData): string[] {
+  if (!trends?.relatedQueries?.length) {
+    return []
+  }
+  return trends.relatedQueries
+    .filter(q => q.type === 'rising')
+    .map(q => q.query)
+    .slice(0, 5)
 }
 
 /**

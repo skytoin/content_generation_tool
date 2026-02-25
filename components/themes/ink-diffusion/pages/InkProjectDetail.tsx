@@ -1547,10 +1547,12 @@ function ContentArchitectView({ content }: ContentArchitectViewProps) {
 
     // Parse keyword lines into structured data
     const keywords = keywordLines.map(line => {
-      const m = line.match(/(.+?)\s*—\s*Volume:\s*(\d+),\s*Difficulty:\s*(\d+),\s*Clicks:\s*(\d+),\s*Intent:\s*(\w+)/)
+      // Clicks field is optional — only included when there's actual clickstream data
+      const m = line.match(/(.+?)\s*—\s*Volume:\s*(\d+),\s*Difficulty:\s*(\d+)(?:,\s*Clicks:\s*(\d+))?,\s*Intent:\s*(\w+)/)
       if (!m) return null
-      return { keyword: m[1], volume: parseInt(m[2]), difficulty: parseInt(m[3]), clicks: parseInt(m[4]), intent: m[5] }
+      return { keyword: m[1], volume: parseInt(m[2]), difficulty: parseInt(m[3]), clicks: m[4] ? parseInt(m[4]) : 0, intent: m[5] }
     }).filter(Boolean) as { keyword: string; volume: number; difficulty: number; clicks: number; intent: string }[]
+    const hasClickData = keywords.some(kw => kw.clicks > 0)
 
     const competitors = competitorLines.map(line => {
       const m = line.match(/(.+?)\s*—\s*Rank:\s*(\d+),\s*Traffic:\s*(\d+),\s*Keywords:\s*(\d+)/)
@@ -1580,7 +1582,7 @@ function ContentArchitectView({ content }: ContentArchitectViewProps) {
                     <th className="text-left py-2 pr-4 font-semibold" style={{ color: tokens.colors.text.secondary }}>Keyword</th>
                     <th className="text-right py-2 px-3 font-semibold" style={{ color: tokens.colors.text.secondary }}>Volume</th>
                     <th className="text-right py-2 px-3 font-semibold" style={{ color: tokens.colors.text.secondary }}>Difficulty</th>
-                    <th className="text-right py-2 px-3 font-semibold" style={{ color: tokens.colors.text.secondary }}>Clicks</th>
+                    {hasClickData && <th className="text-right py-2 px-3 font-semibold" style={{ color: tokens.colors.text.secondary }}>Clicks</th>}
                     <th className="text-left py-2 pl-3 font-semibold" style={{ color: tokens.colors.text.secondary }}>Intent</th>
                   </tr>
                 </thead>
@@ -1600,7 +1602,7 @@ function ContentArchitectView({ content }: ContentArchitectViewProps) {
                           {kw.difficulty}
                         </span>
                       </td>
-                      <td className="text-right py-2 px-3" style={{ color: tokens.colors.text.primary }}>{kw.clicks.toLocaleString()}</td>
+                      {hasClickData && <td className="text-right py-2 px-3" style={{ color: tokens.colors.text.primary }}>{kw.clicks.toLocaleString()}</td>}
                       <td className="py-2 pl-3">
                         <span
                           className="inline-block px-2 py-0.5 rounded-full text-xs font-medium text-white"

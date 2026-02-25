@@ -7,7 +7,7 @@ import { InkSidebar } from '@/components/themes/ink-diffusion/InkSidebar'
 import { tokens } from '@/components/ui-concepts/ink-diffusion-system/design-tokens'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 
 interface DashboardLayoutWrapperProps {
   children: React.ReactNode
@@ -19,13 +19,16 @@ const navItems = [
   { href: '/dashboard/projects', label: 'Projects', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
   { href: '/dashboard/projects/new', label: 'New Project', icon: 'M12 4v16m8-8H4' },
   { href: '/dashboard/profiles', label: 'Profiles', icon: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
+  { href: '/dashboard/blog', label: 'Blog', icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z', adminOnly: true },
 ]
 
 export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps) {
   const { uiMode, toggleUIMode } = useUIMode()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
+  const { data: session } = useSession()
   const isInkDiffusion = uiMode === 'ink-diffusion'
+  const visibleNavItems = navItems.filter((item) => !('adminOnly' in item && item.adminOnly) || session?.user?.isAdmin)
 
   return (
     <div
@@ -125,7 +128,7 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
           >
             {/* Navigation links */}
             <nav className="p-4 space-y-2">
-              {navItems.map((item) => {
+              {visibleNavItems.map((item) => {
                 const isActive = pathname === item.href
                 return (
                   <Link

@@ -115,11 +115,12 @@ export class DataForSEOClient {
     }
   }
 
-  /** Get keyword suggestions with search volume, clicks, and intent */
+  /** Get keyword suggestions with search volume, clicks, and intent (phrase-match expansion) */
   async getKeywordSuggestions(
     keyword: string,
     locationCode = 2840,  // US
-    languageCode = 'en'
+    languageCode = 'en',
+    filters?: Array<unknown>
   ) {
     return this.post<KeywordSuggestionsResult>(
       'dataforseo_labs/google/keyword_suggestions/live',
@@ -129,16 +130,73 @@ export class DataForSEOClient {
         language_code: languageCode,
         include_clickstream_data: true,
         limit: 50,
+        ...(filters && { filters }),
       },
       KEYWORD_CACHE_TTL
     )
   }
 
-  /** Get keywords that a specific domain ranks for */
+  /**
+   * Get keyword ideas using Google Ads category-based relevance matching.
+   * Unlike keyword_suggestions (phrase-match), this finds keywords in the SAME
+   * product/service category as the seeds — much more topically relevant.
+   * Accepts up to 200 seed keywords in a single call.
+   */
+  async getKeywordIdeas(
+    keywords: string[],
+    locationCode = 2840,
+    languageCode = 'en'
+  ) {
+    return this.post<KeywordIdeasResult>(
+      'dataforseo_labs/google/keyword_ideas/live',
+      {
+        keywords: keywords.slice(0, 20), // Keep cost reasonable
+        location_code: locationCode,
+        language_code: languageCode,
+        include_clickstream_data: true,
+        limit: 100,
+        // Exclude navigational intent and very low volume at the API level
+        filters: [
+          ['search_intent_info.main_intent', '<>', 'navigational'],
+          'and',
+          ['keyword_info.search_volume', '>', 10],
+        ],
+        order_by: ['keyword_info.search_volume,desc'],
+      },
+      KEYWORD_CACHE_TTL
+    )
+  }
+
+  /**
+   * Get semantically related keywords based on Google's "Searches related to" feature.
+   * Uses depth-first crawling of Google's related searches graph.
+   * More expensive at higher depths but produces topically coherent results.
+   */
+  async getRelatedKeywords(
+    keyword: string,
+    locationCode = 2840,
+    languageCode = 'en'
+  ) {
+    return this.post<RelatedKeywordsResult>(
+      'dataforseo_labs/google/related_keywords/live',
+      {
+        keyword,
+        location_code: locationCode,
+        language_code: languageCode,
+        include_clickstream_data: true,
+        depth: 1, // ~8 results, good balance of cost and relevance
+        limit: 40,
+      },
+      KEYWORD_CACHE_TTL
+    )
+  }
+
+  /** Get keywords that a specific domain ranks for or is relevant to */
   async getKeywordsForSite(
     target: string,
     locationCode = 2840,
-    languageCode = 'en'
+    languageCode = 'en',
+    limit = 100
   ) {
     return this.post<KeywordsForSiteResult>(
       'dataforseo_labs/google/keywords_for_site/live',
@@ -147,7 +205,7 @@ export class DataForSEOClient {
         location_code: locationCode,
         language_code: languageCode,
         include_clickstream_data: true,
-        limit: 30,
+        limit,
       },
       KEYWORD_CACHE_TTL
     )
@@ -207,9 +265,98 @@ export class DataForSEOClient {
     )
   }
 
+  /**
+   * Get keywords for a site using Google Ads Keyword Planner data.
+   * This is the SAME endpoint that DataForSEO's playground uses when you enter a URL.
+   * Returns much better results than the DataForSEO Labs version because it uses
+   * Google's actual keyword planner relevance matching.
+   *
+   * Path: keywords_data/google_ads/keywords_for_site/live
+   * (NOT dataforseo_labs/google/keywords_for_site/live)
+   *
+   * NOTE: This endpoint returns results as a flat array in `result[]`,
+   * not wrapped in `{ items: [...] }` like Labs endpoints. Uses postArray().
+   */
+  async getKeywordsForSiteGoogleAds(
+    target: string,
+    locationCode = 2840,
+    languageCode = 'en',
+    limit = 200
+  ) {
+    return this.postArray<GoogleAdsKeywordsForSiteResult>(
+      'keywords_data/google_ads/keywords_for_site/live',
+      {
+        target,
+        location_code: locationCode,
+        language_code: languageCode,
+        sort_by: 'search_volume',
+        limit,
+      },
+      KEYWORD_CACHE_TTL
+    )
+  }
+
   /** Get total API cost for this session */
   getTotalCost(): number {
     return this.totalCost
+  }
+
+  /**
+   * POST to a DataForSEO endpoint that returns results as a flat array.
+   * Google Ads endpoints (keywords_data/) return `result: [item, item, ...]`
+   * instead of the Labs pattern `result: [{ items: [...] }]`.
+   */
+  async postArray<T = unknown>(
+    endpoint: string,
+    data: Record<string, unknown>,
+    cacheTtl?: number
+  ): Promise<T[] | null> {
+    const cacheKey = `${endpoint}:${JSON.stringify(data)}`
+    const cached = this.getFromCache<T[]>(cacheKey)
+    if (cached !== null) {
+      console.log(`[DataForSEO] Cache hit: ${endpoint}`)
+      return cached
+    }
+
+    try {
+      const response = await fetch(`${BASE_URL}/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': this.authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([data]),
+      })
+
+      if (!response.ok) {
+        console.error(`[DataForSEO] HTTP ${response.status}: ${response.statusText}`)
+        return null
+      }
+
+      const json = (await response.json()) as DataForSEOResponse<T>
+
+      if (json.tasks?.[0]?.cost) {
+        this.totalCost += json.tasks[0].cost
+        console.log(`[DataForSEO] Cost: $${json.tasks[0].cost.toFixed(4)} (total: $${this.totalCost.toFixed(4)})`)
+      }
+
+      if (json.tasks?.[0]?.status_code !== 20000) {
+        console.error(`[DataForSEO] Task error: ${json.tasks?.[0]?.status_message}`)
+        return null
+      }
+
+      const result = (json.tasks?.[0]?.result as T[]) ?? null
+      if (!result || result.length === 0) return null
+
+      if (cacheTtl) {
+        this.setCache(cacheKey, result, cacheTtl)
+      }
+
+      return result
+    } catch (error) {
+      console.error(`[DataForSEO] Request failed for ${endpoint}:`, error)
+      return null
+    }
   }
 
   private getFromCache<T>(key: string): T | null {
@@ -308,6 +455,82 @@ interface CompetitorsDomainResult {
   }>
 }
 
+// keyword_ideas endpoint: keyword data is nested under keyword_data
+interface KeywordIdeasResult {
+  seed_keywords: string[]
+  items_count: number
+  items: Array<{
+    keyword_data: {
+      keyword: string
+      keyword_info: {
+        search_volume: number
+        competition: number
+        competition_level: string
+        cpc: number
+        monthly_searches: Array<{ year: number; month: number; search_volume: number }>
+      }
+      clickstream_keyword_info?: {
+        search_volume: number
+      }
+      keyword_properties?: {
+        keyword_difficulty: number
+      }
+      search_intent_info?: {
+        main_intent: string
+        foreign_intent: string[]
+      }
+      impressions_info?: {
+        monthly_impressions_count?: { value: number }
+        daily_clicks_count?: { value: number }
+      }
+    }
+  }>
+}
+
+// related_keywords endpoint: items contain keyword_data + related_keywords array
+interface RelatedKeywordsResult {
+  seed_keyword: string
+  items_count: number
+  items: Array<{
+    keyword_data: {
+      keyword: string
+      keyword_info: {
+        search_volume: number
+        competition: number
+        cpc: number
+      }
+      keyword_properties?: {
+        keyword_difficulty: number
+      }
+      search_intent_info?: {
+        main_intent: string
+      }
+      impressions_info?: {
+        daily_clicks_count?: { value: number }
+      }
+    }
+    related_keywords?: Array<{
+      keyword_data: {
+        keyword: string
+        keyword_info: {
+          search_volume: number
+          competition: number
+          cpc: number
+        }
+        keyword_properties?: {
+          keyword_difficulty: number
+        }
+        search_intent_info?: {
+          main_intent: string
+        }
+        impressions_info?: {
+          daily_clicks_count?: { value: number }
+        }
+      }
+    }>
+  }>
+}
+
 interface SerpOrganicResult {
   keyword: string
   check_url: string
@@ -325,10 +548,35 @@ interface SerpOrganicResult {
   }>
 }
 
+// Google Ads keywords_for_site — flat structure (no nesting under keyword_info)
+// This is the endpoint the DataForSEO playground uses when you give it a URL
+interface GoogleAdsKeywordsForSiteResult {
+  keyword: string
+  location_code: number
+  language_code: string
+  search_partners: boolean
+  competition: string  // "LOW", "MEDIUM", "HIGH"
+  competition_index: number  // 0-100
+  search_volume: number
+  cpc: number
+  low_top_of_page_bid: number
+  high_top_of_page_bid: number
+  monthly_searches: Array<{ year: number; month: number; search_volume: number }>
+  keyword_annotations?: {
+    concepts?: Array<{
+      name: string
+      concept_group?: { name: string; type: string }
+    }>
+  }
+}
+
 export type {
   KeywordSuggestionsResult,
+  KeywordIdeasResult,
+  RelatedKeywordsResult,
   KeywordsForSiteResult,
   DomainRankResult,
   CompetitorsDomainResult,
   SerpOrganicResult,
+  GoogleAdsKeywordsForSiteResult,
 }

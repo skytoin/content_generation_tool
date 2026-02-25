@@ -493,6 +493,8 @@ export function RegenerateButton({
             businessInfo: {
               industry: formData?.industry || '',
               companyName: formData?.companyName || '',
+              companyDescription: formData?.companyDescription || '',
+              website: formData?.website || '',
             },
             goals: formData?.goals || [],
             platforms: formData?.platforms || [],

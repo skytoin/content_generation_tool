@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
       businessInfo: businessInfo || {
         industry: options?.industry,
         companyName: options?.company_name,
+        companyDescription: options?.company_description,
         companySize: options?.company_size,
       },
       goals: goals || (options?.primary_goal ? [options.primary_goal, ...(options.secondary_goals || [])] : undefined),
@@ -90,6 +91,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`🏗️ Content Architect [${selectedTier.toUpperCase()}] - Starting for user: ${user.id}`)
     console.log(`   Description: ${description.slice(0, 100)}...`)
+    console.log(`   Website URL: ${architectRequest.businessInfo?.website || '(empty)'}`)
+    console.log(`   Competitor URLs: ${architectRequest.competitorUrls?.join(', ') || '(none)'}`)
 
     // Run the pipeline with selected tier (HARDCODED)
     const result = await runContentArchitectPipeline(architectRequest, selectedTier)

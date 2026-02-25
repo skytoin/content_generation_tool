@@ -7,6 +7,7 @@
  */
 
 import { DataForSEOClient } from './client'
+import { callOpenAI, OPENAI_MODELS } from '@/app/api/generate/openai-client'
 
 // --- Public Types ---
 
@@ -18,6 +19,9 @@ export interface SEOAnalysisRequest {
   userKeywords?: string[]
   targetUrl?: string
   companyName?: string
+  companyType?: string
+  businessDescription?: string  // Full business description for AI relevance filtering
+  seoSeeds?: string[]  // AI-generated customer search terms for keyword discovery
 }
 
 export interface KeywordData {
@@ -28,6 +32,8 @@ export interface KeywordData {
   clicks: number
   searchIntent: 'informational' | 'navigational' | 'commercial' | 'transactional'
   competition: number
+  relevanceScore?: number      // AI: 90=relevant, 50=maybe, undefined=unscored
+  opportunityScore?: number    // Composite 0-100, higher=better opportunity
 }
 
 export interface CompetitorData {
@@ -101,6 +107,10 @@ function extractSeedKeywords(description: string, industry?: string, goals?: str
 
   // General stop words (common English words with no business meaning)
   const stopWords = new Set([
+    // 2-letter words (needed since we allow length >= 2 to keep "ai")
+    'is', 'an', 'to', 'of', 'in', 'on', 'at', 'or', 'by', 'if', 'it',
+    'up', 'do', 'my', 'we', 'so', 'no', 'go', 'he', 'me', 'be', 'us', 'am',
+    // 3+ letter words
     'about', 'would', 'could', 'should', 'their', 'there', 'these', 'those',
     'which', 'where', 'being', 'having', 'doing', 'during', 'before', 'after',
     'with', 'from', 'this', 'that', 'have', 'been', 'more', 'also', 'into',
@@ -114,20 +124,18 @@ function extractSeedKeywords(description: string, industry?: string, goals?: str
   ])
 
   // Step 1: Extract business-relevant words from description
+  // Allow length >= 2 to keep "ai" which is critical for tech/content companies
   const text = description.toLowerCase().replace(/[^\w\s-]/g, ' ')
-  const words = text.split(/\s+/).filter(w => w.length > 2)
-  const businessWords = words.filter(
-    w => !stopWords.has(w) && !goalStopWords.has(w)
-  )
+  const words = text.split(/\s+/).filter(w => w.length >= 2)
+  const isNoise = (w: string) => stopWords.has(w) || goalStopWords.has(w)
+  const businessWords = words.filter(w => !isNoise(w))
 
   // Step 2: Build 2-word phrases from adjacent business words (HIGHEST VALUE — goes first)
   const descriptionKeywords: string[] = []
   for (let i = 0; i < words.length - 1; i++) {
     const w1 = words[i]
     const w2 = words[i + 1]
-    if (!stopWords.has(w1) && !goalStopWords.has(w1) &&
-        !stopWords.has(w2) && !goalStopWords.has(w2) &&
-        w1.length > 2 && w2.length > 2) {
+    if (!isNoise(w1) && !isNoise(w2) && w1.length >= 2 && w2.length >= 2) {
       descriptionKeywords.push(`${w1} ${w2}`)
     }
   }
@@ -223,6 +231,9 @@ function filterSuggestionsForRelevance(
   userKeywords?: string[]
 ): KeywordData[] {
   // Words too generic to count as meaningful overlap — these appear across many industries
+  // NOTE: This filter is now a FALLBACK — AI-based filtering is the primary method.
+  // Only truly universal stop words remain; industry-specific words were removed so
+  // this filter works for any business type (tax firm, restaurant, SaaS, etc.)
   const genericWords = new Set([
     'service', 'services', 'company', 'business', 'online', 'best', 'free',
     'near', 'top', 'how', 'what', 'new', 'cost', 'price', 'review', 'reviews',
@@ -233,10 +244,6 @@ function filterSuggestionsForRelevance(
     'the', 'and', 'for', 'with', 'from', 'that', 'this', 'are', 'your',
     'you', 'can', 'will', 'not', 'all', 'get', 'has', 'was', 'our',
     'professional', 'affordable', 'cheap', 'small', 'large', 'local',
-    'preparation', 'management', 'consulting', 'solutions', 'strategies',
-    'planning', 'guide', 'tips', 'advice', 'help', 'resources',
-    'document', 'documents', 'legal', 'individual', 'personal',
-    'exam', 'civil', 'people', 'outsourcing', 'outsourced',
   ])
 
   // Build topic words from seeds, industry, and user keywords
@@ -246,7 +253,7 @@ function filterSuggestionsForRelevance(
 
   for (const phrase of allSources) {
     for (const word of phrase.toLowerCase().split(/\s+/)) {
-      if (word.length > 2 && !genericWords.has(word)) {
+      if (word.length >= 2 && !genericWords.has(word)) {
         topicWords.add(word)
       }
     }
@@ -277,6 +284,238 @@ function filterSuggestionsForRelevance(
 
     return false
   })
+}
+
+/**
+ * AI-powered keyword relevance filter.
+ *
+ * Replaces hardcoded regex blacklists with an AI agent that evaluates keyword
+ * relevance based on the actual business description. This works universally
+ * for any business type — a tax firm, a restaurant, a SaaS startup — without
+ * needing business-specific blacklists.
+ *
+ * The AI can understand that "ai content detector" is a different product than
+ * "ai content creator" — something regex and word-matching can never do.
+ */
+async function filterKeywordsWithAI(
+  keywords: KeywordData[],
+  businessDescription: string,
+  industry: string,
+  companyType?: string
+): Promise<KeywordData[]> {
+  if (keywords.length === 0) return []
+
+  // Build numbered keyword list for the prompt
+  const keywordList = keywords
+    .map((kw, i) => `${i + 1}. "${kw.keyword}" — ${kw.searchVolume}/mo`)
+    .join('\n')
+
+  const prompt = `You are an SEO analyst. Given a business description and candidate keywords, classify each keyword into one of three tiers.
+
+Business: ${businessDescription}
+Industry: ${industry}
+${companyType ? `What the business offers: ${companyType}` : ''}
+
+Candidate keywords (number — keyword — search volume):
+${keywordList}
+
+Classify each keyword:
+- "relevant" — clearly about this business's products/services/use cases. Include: product category keywords, problem-solving queries, comparison keywords ("best X", "X vs Y"), use case keywords, broad industry terms. Aim for ~40-60% of candidates.
+- "maybe" — tangentially related, could attract some relevant traffic. Include: adjacent topics, upstream/downstream keywords, industry trends. Aim for ~20-30%.
+- "remove" — clearly irrelevant, navigational brand queries (e.g., "chatgpt login"), jobs/salary keywords, or about a DIFFERENT product (e.g., "content detector" when the business creates content). Aim for ~10-30%.
+
+When in doubt, classify as "maybe" rather than "remove".
+
+Return ONLY a JSON object mapping keyword numbers to classifications, e.g. {"1":"relevant","2":"maybe","3":"remove"}`
+
+  try {
+    const result = await callOpenAI(
+      OPENAI_MODELS.GPT_4O_MINI,
+      'You are an SEO keyword relevance analyst. Classify keywords into three tiers. Return only valid JSON.',
+      prompt,
+      3000
+    )
+
+    const jsonMatch = result.match(/\{[\s\S]*?\}/)
+    if (jsonMatch) {
+      const classifications = JSON.parse(jsonMatch[0]) as Record<string, string>
+      const filtered: KeywordData[] = []
+
+      for (const [numStr, tier] of Object.entries(classifications)) {
+        const idx = parseInt(numStr, 10) - 1
+        if (idx < 0 || idx >= keywords.length) continue
+
+        const tierLower = tier.toLowerCase().trim()
+        if (tierLower === 'relevant') {
+          keywords[idx].relevanceScore = 90
+          filtered.push(keywords[idx])
+        } else if (tierLower === 'maybe') {
+          keywords[idx].relevanceScore = 50
+          filtered.push(keywords[idx])
+        }
+        // "remove" keywords are dropped
+      }
+
+      console.log(`[SEO] AI relevance filter: ${filtered.length}/${keywords.length} keywords selected (3-tier)`)
+      return filtered
+    }
+  } catch (error) {
+    console.warn('[SEO] AI keyword filter failed:', error)
+  }
+
+  // Fallback: light filter (remove navigational + zero volume), assign default relevance
+  console.log('[SEO] AI filter failed, using light fallback')
+  return keywords.filter(kw => {
+    if (kw.searchIntent === 'navigational') return false
+    if (kw.searchVolume <= 0) return false
+    kw.relevanceScore = 70
+    return true
+  })
+}
+
+/**
+ * Calculate a composite opportunity score for a keyword.
+ *
+ * Weights: ease 35%, relevance 30%, volume 25%, CPC 10%.
+ * Surfaces low-difficulty, high-relevance keywords ("low-hanging fruit")
+ * instead of just sorting by raw volume.
+ */
+function calculateOpportunityScore(kw: KeywordData): number {
+  // Volume: log-scale (100 vs 200 matters more than 50K vs 50.1K)
+  const volumeScore = Math.min(100, (Math.log10(Math.max(kw.searchVolume, 1)) / 5) * 100)
+
+  // Ease: inverted difficulty (low difficulty = high ease)
+  const easeScore = 100 - kw.difficulty
+
+  // Relevance: from AI classification (90=relevant, 50=maybe, 70=default)
+  const relevance = kw.relevanceScore ?? 70
+
+  // CPC: commercial value signal, capped at $10
+  const cpcScore = Math.min(100, (kw.cpc / 10) * 100)
+
+  return Math.round(
+    (volumeScore * 0.25) + (easeScore * 0.35) + (relevance * 0.30) + (cpcScore * 0.10)
+  )
+}
+
+/**
+ * Post-process keywords for quality and diversity.
+ *
+ * 1. Remove junk (stop-word-only phrases, special chars, numbers, repeated roots)
+ * 2. Deduplicate similar keywords (keep highest-volume representative)
+ *    e.g. "ai write", "ai writing", "write ai" → keep one
+ * 3. Diversity cap — no more than MAX_PER_FAMILY keywords sharing the same root word
+ */
+function deduplicateAndDiversify(keywords: KeywordData[]): KeywordData[] {
+  const WORD_FAMILY: Record<string, string> = {
+    writing: 'write', written: 'write', writes: 'write', writer: 'write', writers: 'write',
+    creating: 'create', created: 'create', creates: 'create', creator: 'create', creators: 'create', creation: 'create',
+    generating: 'generate', generated: 'generate', generates: 'generate', generator: 'generate', generators: 'generate', generation: 'generate',
+    automating: 'automate', automated: 'automate', automation: 'automate',
+    optimizing: 'optimize', optimized: 'optimize', optimization: 'optimize',
+    blogging: 'blog', blogs: 'blog', blogger: 'blog', bloggers: 'blog',
+    posting: 'post', posts: 'post',
+    emails: 'email',
+    words: 'word',
+    tools: 'tool',
+    contents: 'content',
+    copywriting: 'copywrite', copywriter: 'copywrite', copywriters: 'copywrite',
+  }
+
+  const STOP_WORDS = new Set([
+    'a', 'an', 'the', 'and', 'or', 'for', 'with', 'in', 'on', 'to',
+    'of', 'by', 'at', 'is', 'it', 'as', 'be', 'do', 'if', 'my', 'no',
+    'so', 'up', 'we', 'he', 'me', 'us', 'am', 'our', 'are',
+    'your', 'how', 'can', 'you', 'not', 'all', 'get', 'has', 'was',
+    'what', 'who', 'this', 'that', 'will', 'just', 'very', 'best',
+  ])
+
+  function canon(word: string): string {
+    const lower = word.toLowerCase()
+    return WORD_FAMILY[lower] || lower
+  }
+
+  function getMeaningfulRoots(keyword: string): string[] {
+    // Strip special chars like & # @ and hyphens, then split
+    const words = keyword.toLowerCase().replace(/[&@#$%^*()+=\-]/g, ' ').split(/\s+/)
+    return words
+      .filter(w => !STOP_WORDS.has(w) && w.length >= 2 && !/^\d+$/.test(w))
+      .map(canon)
+  }
+
+  function groupKey(keyword: string): string {
+    const roots = getMeaningfulRoots(keyword)
+    return [...new Set(roots)].sort().join('|')
+  }
+
+  // Step 1: Remove junk
+  const cleaned = keywords.filter(kw => {
+    const roots = getMeaningfulRoots(kw.keyword)
+
+    // No meaningful words at all → "our we", "so how are you"
+    if (roots.length === 0) return false
+
+    // Only one meaningful word that's a number → "7000 words" (word mapped but 7000 removed)
+    // Actually catch: only 1 root and keyword has 2+ raw words → likely filler
+    const rawWords = kw.keyword.toLowerCase().replace(/[&@#$%^*()+=]/g, ' ').split(/\s+/).filter(w => w.length >= 2)
+    if (roots.length === 1 && rawWords.length >= 3) return false
+
+    // All meaningful words collapse to same root → "write and write", "style & style"
+    const uniqueRoots = new Set(roots)
+    if (roots.length > 1 && uniqueRoots.size === 1) return false
+
+    return true
+  })
+
+  // Step 2: Deduplicate — group by canonical form, keep highest volume
+  const groups = new Map<string, KeywordData>()
+  for (const kw of cleaned) {
+    const key = groupKey(kw.keyword)
+    if (!key) continue
+    const existing = groups.get(key)
+    if (!existing || kw.searchVolume > existing.searchVolume) {
+      groups.set(key, kw)
+    }
+  }
+
+  // Step 3: Detect core roots — roots appearing in >50% of deduped keywords are exempt from cap
+  const deduped = [...groups.values()]
+  const rootAppearances = new Map<string, number>()
+  for (const kw of deduped) {
+    const roots = new Set(getMeaningfulRoots(kw.keyword))
+    for (const r of roots) {
+      rootAppearances.set(r, (rootAppearances.get(r) || 0) + 1)
+    }
+  }
+  const coreRoots = new Set<string>()
+  for (const [root, count] of rootAppearances) {
+    if (count > deduped.length * 0.5) {
+      coreRoots.add(root)
+    }
+  }
+  if (coreRoots.size > 0) {
+    console.log(`[SEO] Core roots (exempt from diversity cap): ${[...coreRoots].join(', ')}`)
+  }
+
+  // Step 4: Diversity cap — sort by volume, then cap per non-core word family
+  const MAX_PER_FAMILY = 4
+  const sorted = deduped.sort((a, b) => b.searchVolume - a.searchVolume)
+  const familyCounts = new Map<string, number>()
+  const diverse: KeywordData[] = []
+
+  for (const kw of sorted) {
+    const roots = getMeaningfulRoots(kw.keyword)
+    // Only check cap for non-core roots
+    const cappedOut = roots.some(w => !coreRoots.has(w) && (familyCounts.get(w) || 0) >= MAX_PER_FAMILY)
+    if (cappedOut) continue
+
+    diverse.push(kw)
+    for (const w of roots) {
+      familyCounts.set(w, (familyCounts.get(w) || 0) + 1)
+    }
+  }
+
+  return diverse
 }
 
 function emptyResult(): SEOAnalysisResult {
@@ -447,44 +686,209 @@ export async function analyzeSEO(request: SEOAnalysisRequest): Promise<SEOAnalys
     }
   }
 
-  // Step 4: Get keyword suggestions from seed keywords (top 3 for cost efficiency)
-  console.log('[SEO Analyzer] Getting keyword suggestions...')
+  // Step 4: Keyword discovery from multiple sources
+  console.log('[SEO Analyzer] Starting keyword discovery...')
   const allSuggestions: KeywordData[] = []
   const seenKeywords = new Set<string>()
 
-  for (const seedKw of seedKeywords.slice(0, 3)) {
-    const suggestions = await client.getKeywordSuggestions(seedKw)
-    if (suggestions?.items) {
-      for (const item of suggestions.items) {
-        if (item.keyword_info?.search_volume > 0 && !seenKeywords.has(item.keyword)) {
+  // Primary source: Google Ads keywords_for_site — if we have the user's URL,
+  // this is the BEST source. Uses Google's actual Keyword Planner data (same as
+  // DataForSEO playground when you enter a URL). Returns highly relevant keywords.
+  if (request.targetUrl) {
+    const targetDomain = extractDomain(request.targetUrl)
+    console.log(`[SEO Analyzer] Getting Google Ads keywords for site: ${targetDomain}`)
+    const siteKeywords = await client.getKeywordsForSiteGoogleAds(targetDomain)
+    if (siteKeywords && siteKeywords.length > 0) {
+      for (const item of siteKeywords) {
+        if (item.search_volume > 0 && !seenKeywords.has(item.keyword)) {
           seenKeywords.add(item.keyword)
           allSuggestions.push({
             keyword: item.keyword,
-            searchVolume: item.keyword_info?.search_volume || 0,
-            difficulty: item.keyword_properties?.keyword_difficulty || 0,
-            cpc: item.keyword_info?.cpc || 0,
-            clicks: item.impressions_info?.daily_clicks_count?.value || 0,
-            searchIntent: normalizeIntent(item.search_intent_info?.main_intent),
-            competition: item.keyword_info?.competition || 0,
+            searchVolume: item.search_volume,
+            // Google Ads doesn't return keyword_difficulty — use competition_index as proxy
+            difficulty: item.competition_index || 0,
+            cpc: item.cpc || 0,
+            clicks: 0, // Google Ads endpoint doesn't return click data
+            // Google Ads doesn't return search intent — default to commercial
+            searchIntent: 'commercial',
+            competition: (item.competition_index || 0) / 100,
           })
+        }
+      }
+      console.log(`[SEO Analyzer] Google Ads site keywords found: ${allSuggestions.length}`)
+    }
+  }
+
+  // Build discovery seeds — prefer AI-generated seeds (customer search terms) over
+  // mechanical extraction. AI seeds like "ai writing tool", "ai blog writer" produce
+  // much better results than extracted jargon like "ai content generation platform".
+  const shortUserKeywords = (request.userKeywords || [])
+    .filter(kw => kw.split(/\s+/).length <= 4)
+  const discoverySeeds = request.seoSeeds?.length
+    ? [...new Set([...request.seoSeeds, ...seedKeywords.slice(0, 5)])].slice(0, 20)
+    : [...new Set([...seedKeywords, ...shortUserKeywords])].slice(0, 20)
+  console.log(`[SEO Analyzer] Discovery seeds (${request.seoSeeds?.length ? 'AI' : 'extracted'}): ${discoverySeeds.join(', ')}`)
+
+  // If Google Ads returned enough site keywords, skip phrase-match and related-keywords
+  // (which tend to produce generic results). But ALWAYS run keyword_ideas — it uses
+  // Google Ads category matching and adds diverse, topically relevant keywords.
+  const hasGoogleAdsResults = allSuggestions.length >= 30
+  if (hasGoogleAdsResults) {
+    console.log(`[SEO Analyzer] Google Ads returned ${allSuggestions.length} keywords, skipping phrase-match/related (keeping keyword_ideas)`)
+  }
+
+  // Always run keyword_ideas — category-based discovery produces diverse relevant keywords
+  const ideas = await client.getKeywordIdeas(discoverySeeds)
+  if (ideas?.items) {
+    for (const item of ideas.items) {
+      const kd = item.keyword_data
+      if (kd?.keyword_info?.search_volume > 0 && !seenKeywords.has(kd.keyword)) {
+        seenKeywords.add(kd.keyword)
+        allSuggestions.push({
+          keyword: kd.keyword,
+          searchVolume: kd.keyword_info?.search_volume || 0,
+          difficulty: kd.keyword_properties?.keyword_difficulty || 0,
+          cpc: kd.keyword_info?.cpc || 0,
+          clicks: kd.impressions_info?.daily_clicks_count?.value || 0,
+          searchIntent: normalizeIntent(kd.search_intent_info?.main_intent),
+          competition: kd.keyword_info?.competition || 0,
+        })
+      }
+    }
+  }
+
+  // Supplementary 1: keyword_suggestions (phrase-match) — returns high-volume keywords
+  // that contain the seed words. This is where keywords like "ai write" (22K vol),
+  // "ai writing" (22K vol), "blog post" (8K vol) come from.
+  // Use the shortest seeds (2-word phrases) for best phrase-match expansion.
+  // NOTE: phrase-match is broad — the AI relevance filter handles removing irrelevant results.
+  if (!hasGoogleAdsResults) {
+    const shortSeeds = discoverySeeds
+      .filter(s => s.split(/\s+/).length <= 2)
+      .slice(0, 3)
+    console.log(`[SEO Analyzer] Phrase-match seeds: ${shortSeeds.join(', ')}`)
+
+    // Universal API-level filters only — business-specific filtering is now handled
+    // by the AI relevance filter after all keywords are collected.
+    const phraseMatchFilters: Array<unknown> = [
+      ['keyword_info.search_volume', '>', 10],
+    ]
+
+    const suggestionResults = await Promise.all(
+      shortSeeds.map(seed => client.getKeywordSuggestions(seed, 2840, 'en', phraseMatchFilters))
+    )
+
+    for (const suggestions of suggestionResults) {
+      if (suggestions?.items) {
+        for (const item of suggestions.items) {
+          if (item.keyword_info?.search_volume > 0 && !seenKeywords.has(item.keyword)) {
+            seenKeywords.add(item.keyword)
+            allSuggestions.push({
+              keyword: item.keyword,
+              searchVolume: item.keyword_info?.search_volume || 0,
+              difficulty: item.keyword_properties?.keyword_difficulty || 0,
+              cpc: item.keyword_info?.cpc || 0,
+              clicks: item.impressions_info?.daily_clicks_count?.value || 0,
+              searchIntent: normalizeIntent(item.search_intent_info?.main_intent),
+              competition: item.keyword_info?.competition || 0,
+            })
+          }
         }
       }
     }
   }
 
-  // Filter suggestions for relevance to the actual industry/topic
-  // DataForSEO often returns unrelated high-volume keywords that share a generic word
-  // (e.g., "postal service" when seed was "financial services" — both contain "service")
-  const relevantSuggestions = filterSuggestionsForRelevance(
-    allSuggestions,
-    seedKeywords,
-    request.industry,
-    request.userKeywords
-  )
+  // Supplementary 2: related_keywords — Google's "Searches related to" for semantic expansion
+  // Call with up to 2 different seeds for broader coverage
+  if (!hasGoogleAdsResults && discoverySeeds.length > 0) {
+    // Pick the most specific (longest) seed, plus a second different one if available
+    const sorted = [...discoverySeeds].sort((a, b) => b.split(/\s+/).length - a.split(/\s+/).length)
+    const relatedSeeds = sorted.slice(0, 2)
 
-  result.suggestedKeywords = relevantSuggestions
-    .sort((a, b) => b.searchVolume - a.searchVolume)
+    const relatedResults = await Promise.all(
+      relatedSeeds.map(seed => client.getRelatedKeywords(seed))
+    )
+
+    for (const related of relatedResults) {
+      if (related?.items) {
+        for (const item of related.items) {
+          const allRelated = [item.keyword_data, ...(item.related_keywords?.map(r => r.keyword_data) || [])]
+          for (const kd of allRelated) {
+            if (kd?.keyword_info?.search_volume > 0 && !seenKeywords.has(kd.keyword)) {
+              seenKeywords.add(kd.keyword)
+              allSuggestions.push({
+                keyword: kd.keyword,
+                searchVolume: kd.keyword_info?.search_volume || 0,
+                difficulty: kd.keyword_properties?.keyword_difficulty || 0,
+                cpc: kd.keyword_info?.cpc || 0,
+                clicks: kd.impressions_info?.daily_clicks_count?.value || 0,
+                searchIntent: normalizeIntent(kd.search_intent_info?.main_intent),
+                competition: kd.keyword_info?.competition || 0,
+              })
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Primary filter: AI-based relevance filtering
+  // The AI understands the business context and can distinguish between similar keywords
+  // (e.g., "ai content creator" vs "ai content detector" for a content creation business)
+  let relevantSuggestions = await filterKeywordsWithAI(
+    allSuggestions,
+    request.businessDescription || request.description,
+    request.industry || '',
+    request.companyType
+  )
+  console.log(`[SEO Analyzer] AI relevance filter: ${relevantSuggestions.length}/${allSuggestions.length} keywords survived`)
+
+  // Fallback: if AI filter returned too few results, try word-overlap filter
+  // We need at least ~25 to produce 20 after dedup/diversity
+  if (relevantSuggestions.length < 25 && allSuggestions.length > relevantSuggestions.length) {
+    console.log(`[SEO Analyzer] AI filter returned too few (${relevantSuggestions.length}), falling back to word-overlap filter`)
+    const wordOverlapResults = filterSuggestionsForRelevance(
+      allSuggestions,
+      discoverySeeds,
+      request.industry,
+      request.userKeywords
+    )
+    // Merge: keep AI results + add word-overlap results that AI missed
+    if (wordOverlapResults.length > relevantSuggestions.length) {
+      const aiKeywords = new Set(relevantSuggestions.map(kw => kw.keyword))
+      const additional = wordOverlapResults.filter(kw => !aiKeywords.has(kw.keyword))
+      relevantSuggestions = [...relevantSuggestions, ...additional]
+      console.log(`[SEO Analyzer] Merged: ${relevantSuggestions.length} keywords (AI + word-overlap)`)
+    }
+  }
+
+  // Last resort: if still too few, use light filter
+  if (relevantSuggestions.length < 15 && allSuggestions.length > relevantSuggestions.length) {
+    console.log(`[SEO Analyzer] Still too few keywords (${relevantSuggestions.length}/${allSuggestions.length}), using light filter`)
+    relevantSuggestions = allSuggestions.filter(kw => {
+      if (kw.searchIntent === 'navigational') return false
+      if (kw.searchVolume <= 0) return false
+      return true
+    })
+  }
+
+  // Deduplicate similar keywords and enforce diversity before final selection
+  const diverseKeywords = deduplicateAndDiversify(relevantSuggestions)
+  console.log(`[SEO Analyzer] After dedup/diversity: ${diverseKeywords.length} keywords (from ${relevantSuggestions.length} filtered)`)
+
+  // Calculate opportunity score for each keyword and sort by it
+  for (const kw of diverseKeywords) {
+    kw.opportunityScore = calculateOpportunityScore(kw)
+  }
+
+  result.suggestedKeywords = diverseKeywords
+    .sort((a, b) => (b.opportunityScore ?? 0) - (a.opportunityScore ?? 0))
     .slice(0, 20)
+
+  console.log(`[SEO Analyzer] Final ${result.suggestedKeywords.length} keywords (by opportunity score):`)
+  for (const kw of result.suggestedKeywords.slice(0, 5)) {
+    console.log(`  ${kw.keyword}: opp=${kw.opportunityScore} vol=${kw.searchVolume} diff=${kw.difficulty} rel=${kw.relevanceScore ?? 'n/a'}`)
+  }
 
   // Step 5: Verify user-provided keywords
   if (request.userKeywords?.length) {

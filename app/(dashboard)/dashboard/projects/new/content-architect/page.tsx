@@ -94,6 +94,7 @@ function ContentArchitectForm() {
   const [description, setDescription] = useState('')
   const [industry, setIndustry] = useState('')
   const [companyName, setCompanyName] = useState('')
+  const [companyDescription, setCompanyDescription] = useState('')
   const [selectedGoals, setSelectedGoals] = useState<string[]>([])
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
   const [includeImages, setIncludeImages] = useState(true)
@@ -141,6 +142,7 @@ function ContentArchitectForm() {
           businessInfo: {
             industry,
             companyName,
+            companyDescription,
           },
           goals: selectedGoals,
           platforms: selectedPlatforms,
@@ -268,6 +270,20 @@ function ContentArchitectForm() {
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
                 />
               </div>
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Company Description
+              </label>
+              <textarea
+                value={companyDescription}
+                onChange={(e) => setCompanyDescription(e.target.value)}
+                placeholder="What does your company do? e.g. 'We build AI-powered tools for marketing teams'"
+                rows={2}
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all resize-none"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Industry

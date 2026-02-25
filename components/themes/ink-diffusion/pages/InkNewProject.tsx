@@ -256,6 +256,8 @@ interface WizardState {
   caDescription: string
   caIndustry: string
   caCompanyName: string
+  caCompanyDescription: string
+  caWebsite: string
   caGoals: string[]
   caPlatforms: string[]
   caIncludeImages: boolean
@@ -332,6 +334,8 @@ function InkNewProjectWizard() {
     caDescription: '',
     caIndustry: '',
     caCompanyName: '',
+    caCompanyDescription: '',
+    caWebsite: '',
     caGoals: [],
     caPlatforms: [],
     caIncludeImages: true,
@@ -523,6 +527,7 @@ function InkNewProjectWizard() {
     const updates: Partial<WizardState> = {}
 
     if (profile.companyName) { updates.company = profile.companyName; updates.caCompanyName = profile.companyName; applied.add('company') }
+    if (profile.companyDescription) { updates.caCompanyDescription = profile.companyDescription; applied.add('caCompanyDescription') }
     if (profile.primaryAudience) { updates.audience = profile.primaryAudience; applied.add('audience') }
     if (profile.primaryGoals) { updates.goals = profile.primaryGoals; applied.add('goals') }
     if (profile.sampleContent) { updates.sampleArticles = profile.sampleContent; applied.add('sampleArticles') }
@@ -533,6 +538,8 @@ function InkNewProjectWizard() {
     // Content Architect fields from profile
     if (profile.industry) { updates.caIndustry = profile.industry; applied.add('caIndustry') }
     if (profile.brandGuidelines) { updates.caAdditionalContext = profile.brandGuidelines; applied.add('caAdditionalContext') }
+    if (profile.competitorUrls) { updates.caCompetitorUrls = profile.competitorUrls; applied.add('caCompetitorUrls') }
+    if (profile.websiteUrl) { updates.caWebsite = profile.websiteUrl; applied.add('caWebsite') }
 
     setState(prev => ({ ...prev, ...updates }))
     setProfileFieldsApplied(applied)
@@ -542,7 +549,7 @@ function InkNewProjectWizard() {
     setSelectedProfileId(null)
     const clearedFields: Partial<WizardState> = {}
     profileFieldsApplied.forEach(field => {
-      if (field === 'company' || field === 'audience' || field === 'goals' || field === 'industry' || field === 'sampleArticles' || field === 'additionalInfo' || field === 'sampleTweets' || field === 'sampleLinkedInPosts' || field === 'caCompanyName' || field === 'caIndustry' || field === 'caAdditionalContext') {
+      if (field === 'company' || field === 'audience' || field === 'goals' || field === 'industry' || field === 'sampleArticles' || field === 'additionalInfo' || field === 'sampleTweets' || field === 'sampleLinkedInPosts' || field === 'caCompanyName' || field === 'caCompanyDescription' || field === 'caIndustry' || field === 'caAdditionalContext' || field === 'caCompetitorUrls' || field === 'caWebsite') {
         clearedFields[field as keyof WizardState] = '' as any
       }
     })
@@ -836,6 +843,8 @@ function InkNewProjectWizard() {
             description: state.caDescription,
             industry: state.caIndustry,
             companyName: state.caCompanyName,
+            companyDescription: state.caCompanyDescription,
+            website: state.caWebsite,
             goals: state.caGoals,
             platforms: state.caPlatforms,
             includeImages: state.caIncludeImages,
@@ -1104,6 +1113,8 @@ function InkNewProjectWizard() {
               businessInfo: {
                 industry: state.caIndustry,
                 companyName: state.caCompanyName,
+                companyDescription: state.caCompanyDescription,
+                website: state.caWebsite,
               },
               goals: state.caGoals,
               platforms: state.caPlatforms,
@@ -1617,6 +1628,40 @@ function InkNewProjectWizard() {
                         style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                        Website URL
+                        {profileFieldsApplied.has('caWebsite') && (
+                          <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ background: tokens.colors.sage[50], color: tokens.colors.sage[700] }}>From profile</span>
+                        )}
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://yourwebsite.com"
+                        value={state.caWebsite}
+                        onChange={(e) => updateState('caWebsite', e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl outline-none"
+                        style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
+                      Company Description
+                      {profileFieldsApplied.has('caCompanyDescription') && (
+                        <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ background: tokens.colors.sage[50], color: tokens.colors.sage[700] }}>From profile</span>
+                      )}
+                    </label>
+                    <textarea
+                      placeholder="What does your company do? e.g. 'We build AI-powered tools for marketing teams to create content faster'"
+                      value={state.caCompanyDescription}
+                      onChange={(e) => updateState('caCompanyDescription', e.target.value)}
+                      rows={2}
+                      className="w-full px-4 py-3 rounded-xl outline-none resize-none"
+                      style={{ background: tokens.colors.paper.warm, border: `1px solid ${tokens.colors.paper.border}`, fontFamily: tokens.fonts.sans, color: tokens.colors.text.primary }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div>
                       <label className="block text-sm font-medium mb-2" style={{ color: tokens.colors.text.secondary, fontFamily: tokens.fonts.sans }}>
                         Industry

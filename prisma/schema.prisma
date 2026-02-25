@@ -40,6 +40,7 @@ model User {
   projects        Project[]
   payments        Payment[]
   companyProfiles CompanyProfile[]
+  blogPosts       BlogPost[]
 
   @@map("users")
 }
@@ -207,4 +208,37 @@ model Payment {
   @@index([userId])
   @@index([createdAt])
   @@map("payments")
+}
+
+model BlogPost {
+  id               String    @id @default(cuid())
+  authorId         String
+
+  // Content
+  title            String
+  slug             String    @unique
+  excerpt          String?   @db.Text
+  content          Json?     // Tiptap document JSON
+  featuredImage    String?
+  featuredImageAlt String?
+
+  // Publishing
+  status           String    @default("draft") // draft, published
+  publishedAt      DateTime?
+
+  // SEO
+  metaTitle        String?
+  metaDescription  String?   @db.Text
+  tags             String?   @db.Text // comma-separated
+
+  // Timestamps
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  author           User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([status, publishedAt])
+  @@map("blog_posts")
 }
